@@ -56,13 +56,12 @@
                             <div class="col-lg-4">
                                 <span style="font-size: small;">QR Code Type</span>
                                 <div class="container-fluid d-flex justify-content-start p-0">
-                                    <div id="reader_type" class="mx-auto"></div>
-                                    {{-- <div id="qrcode_type"></div> --}}
+                                    <video id="qr-video" style="width: 100%; max-width: 400px;"></video>
                                 </div>
                                 <br>
-                                {{-- <button type="button" id="scanType" class="btn btn-primary btn-sm px-4">
+                                <button type="button" id="scanType" class="btn btn-primary btn-sm px-4">
                                     Scan
-                                </button> --}}
+                                </button>
                             </div>
                             <div class="col-lg-8">
                                 <p class="text-sm">Tractor Type:</p>
@@ -177,115 +176,50 @@
     </div>
 </div>
 @endsection
-@section('style')
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Coba akses kamera, lalu langsung matikan semua track-nya
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(function (stream) {
-                stream.getTracks().forEach(function (track) {
-                    track.stop();
-                });
-                console.log('✅ Semua kamera dimatikan saat halaman dibuka.');
-                // typeScanner.render(onScanSuccessType, onScanFailureType);
-            })
-            .catch(function (err) {
-                // Tidak masalah jika user belum pernah mengizinkan akses
-                console.log('ℹ️ Kamera tidak aktif atau akses ditolak:', err.name);
-            });
-    });
-</script>
-@endsection
 @section('script')
 <!-- QR Code Library -->
-<script src="{{ asset('assets/js/html5-qrcode.min.js') }}"></script>
+<script src="{{ asset('assets/js/qr-scanner.umd.min.js') }}"></script>
 <script src="{{ asset('assets/js/jquery.min.js') }}"></script>
-{{-- <script src="{{ asset('assets/js/qrcode.min.js') }}"></script> --}}
-{{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
-<script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script> --}}
-
-<script>
-    // Cegah reload berkali-kali
-    let alreadyReloaded = false;
-
-    // Tangkap semua unhandled errors di halaman
-    window.addEventListener('error', function (event) {
-        if (event.error && event.error.name === 'NotReadableError' && !alreadyReloaded) {
-            alreadyReloaded = true;
-            console.warn("NotReadableError terdeteksi dari error global. Reloading...");
-            setTimeout(() => location.reload(), 500);
-        }
-    });
-
-    // Juga tangkap unhandled promise rejections (banyak error async muncul di sini)
-    window.addEventListener('unhandledrejection', function (event) {
-        if (event.reason && event.reason.name === 'NotReadableError' && !alreadyReloaded) {
-            alreadyReloaded = true;
-            console.warn("NotReadableError terdeteksi dari promise rejection. Reloading...");
-            setTimeout(() => location.reload(), 500);
-        }
-    });
-</script>
 
 <!-- QR Code Generation Script -->
 <script>
-    var element = document.getElementById('parent_qrcode');
-    var width = element.offsetWidth;
+    const videoElem = document.getElementById('qr-video');
+    let qrScanner;
 
-    // let config = {
-    //     fps: 10,
-    //     qrbox: {width: width, height: width},
-    //     rememberLastUsedCamera: true,
-    //     // Only support camera scan type.
-    //     supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
-    // };
-
-    // let typeScanner = new Html5QrcodeScanner(
-    //     "reader", config, false
-    // );
-
-    // function onScanSuccessType(decodedText, decodedResult) {
-    //     let splitText = decodedText.split(";");
-
-    //     if (splitText.length >= 4) {
-    //         document.getElementById("Id_Type").value = decodedText;
-    //         document.getElementById("no").value = splitText[0];
-    //         document.getElementById("type").value = splitText[2];
-    //         document.getElementById("production").value = splitText[3];
-    //         typeScanner.clear();
-    //         typeScanner.stop();
-    //     } else {
-    //         alert("QR Code tidak valid atau format tidak sesuai. Coba scan QR yang lainnya.");
-    //     }
-    // }
-
-    // function onScanFailureType(errorMessage, error) {
-    //     console.warn("Scan error:", errorMessage);
-    // }
-
-    html5QrCode = new Html5Qrcode("reader_type");
-    Html5Qrcode.getCameras().then(devices => {
-        //ask permissions
-    }).catch(err => {
-        alert(err);
-    });
-	const qrCodeSuccessCallback = (decodedText, decodedResult) => {
-	
-        //do stuff
-	};
-    const formatsToSupport = [
-        Html5QrcodeSupportedFormats.QR_CODE
-      ];
-	const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1, focusMode:"continuous",formatsToSupport:formatsToSupport,advanced:[{zoom: 1.5}],experimentalFeatures:{useBarCodeDetectorIfSupported:true}};
-	
-	// If you want to prefer Back camera
-	html5QrCode.start({ facingMode: "user" }, config, qrCodeSuccessCallback).catch(err => {
-        alert(err);
+    document.getElementById("scanType").addEventListener("click", async () => {
+        if (!qrScanner) {
+            qrScanner = new QrScanner(
+                videoElem,
+                result => onDecode(result.data),
+                {
+                    preferredCamera: 'environment',
+                    highlightScanRegion: true,
+                    highlightCodeOutline: true,
+                    maxScansPerSecond: 5
+                }
+            );
+        }
+        try {
+            await qrScanner.start();
+        } catch (e) {
+            console.error('Error starting scanner:', e);
+            alert('Tidak dapat akses kamera.');
+        }
     });
 
-    // document.getElementById("scanType").addEventListener("click", function () {
-    //     typeScanner.render(onScanSuccessType);
-    // });
+    function onDecode(decodedText) {
+        qrScanner.stop();
+
+        const split = decodedText.split(';');
+        if (split.length < 4) {
+            alert("QR Code tidak valid / format tidak sesuai.");
+            return;
+        }
+        document.getElementById("Id_Type").value = decodedText;
+        document.getElementById("no").value      = split[0];
+        document.getElementById("type").value    = split[2];
+        document.getElementById("production").value = split[3];
+    }
 </script>
 
 <script>

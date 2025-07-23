@@ -38,7 +38,7 @@ class TrackController extends Controller
             ->where('Id_Area', $user->Id_Area)
             ->get();
 
-        return view('users.tracks.index3', compact('page', 'user', 'parts'));
+        return view('users.tracks.index2', compact('page', 'user', 'parts'));
     }
 
     public function store(Request $request)

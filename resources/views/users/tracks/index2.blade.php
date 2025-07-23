@@ -56,7 +56,8 @@
                             <div class="col-lg-4">
                                 <span style="font-size: small;">QR Code Type</span>
                                 <div class="container-fluid d-flex justify-content-start p-0">
-                                    <video id="qr-video" style="width: 100%; max-width: 400px;"></video>
+                                    <div id="reader_type" class="mx-auto"></div>
+                                    {{-- <div id="qrcode_type"></div> --}}
                                 </div>
                                 <br>
                                 <button type="button" id="scanType" class="btn btn-primary btn-sm px-4">
@@ -125,7 +126,7 @@
                                     <label class="form-label text-primary d-block">{{ $part->photo_angle->Name_Photo_Angle }} <span class="material-symbols-rounded">{{ $part->photo_angle->Icon_Photo_Angle }}</span></label>
                                     <div class="input-group input-group-outline my-3 is-filled @error($part) is-invalid @enderror">
                                         <label class="form-label">{{ $part->photo_angle->Name_Photo_Angle }}</label>
-                                        <input type="file" class="form-control image-input" name="{{ $part->photo_angle->Id_Photo_Angle }}" data-preview="#preview-{{ $part->photo_angle->Id_Photo_Angle }}" accept="image/*" capture="environment">
+                                        <input type="file" class="form-control image-input" name="{{ $part->photo_angle->Id_Photo_Angle }}" data-preview="#preview-{{ $part->photo_angle->Id_Photo_Angle }}" accept="image/*">
                                     </div>
                                     <div class="invalid-feedback">You must upload this photo.</div>
                                     @error($part)
@@ -178,48 +179,111 @@
 @endsection
 @section('script')
 <!-- QR Code Library -->
-<script src="{{ asset('assets/js/qr-scanner.umd.min.js') }}"></script>
+<script src="{{ asset('assets/js/html5-qrcode.min.js') }}"></script>
 <script src="{{ asset('assets/js/jquery.min.js') }}"></script>
+{{-- <script src="{{ asset('assets/js/qrcode.min.js') }}"></script> --}}
+{{-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script> --}}
 
 <!-- QR Code Generation Script -->
 <script>
-    const videoElem = document.getElementById('qr-video');
-    let qrScanner;
+    var element = document.getElementById('parent_qrcode');
+    var width = element.offsetWidth;
+    // var width = 100;
 
-    document.getElementById("scanType").addEventListener("click", async () => {
-        if (!qrScanner) {
-            qrScanner = new QrScanner(
-                videoElem,
-                result => onDecode(result.data),
-                {
-                    preferredCamera: 'environment',
-                    highlightScanRegion: true,
-                    highlightCodeOutline: true,
-                    maxScansPerSecond: 5
-                }
-            );
+    let typeScanner = new Html5QrcodeScanner(
+        "reader_type", {
+            fps: 10,
+            qrbox: {
+                width: width,
+                height: width,
+            },
+            focusMode:"continuous",
         }
-        try {
-            await qrScanner.start();
-        } catch (e) {
-            console.error('Error starting scanner:', e);
-            alert('Tidak dapat akses kamera.');
+    );
+
+    // let areaScanner = new Html5QrcodeScanner(
+    //     "reader_area", {
+    //         fps: 10,
+    //         qrbox: {
+    //             width: width,
+    //             height: width,
+    //         },
+    //     }
+    // );
+
+    // var qrcode_type = new QRCode("qrcode_type", {
+    //     width: width,
+    //     height: width
+    // });
+
+    // var qrcode_area = new QRCode("qrcode_area", {
+    //     width: width,
+    //     height: width
+    // });
+
+    function onScanSuccessType(decodedText, decodedResult) {    
+        // Hilangkan semua tanda baca dan spasi
+        // decodedText = decodedText.replace(/[^\w]/g, '');
+        // Ambil 10 karakter pertama
+        // decodedText = decodedText.substring(0, 12);
+
+        // Split decodedText melalui tanda semicolon [;]
+        let splitText = decodedText.split(";");
+
+        if (splitText.length >= 4) {
+            document.getElementById("Id_Type").value = decodedText;
+            document.getElementById("no").value = splitText[0];
+            document.getElementById("type").value = splitText[2];
+            document.getElementById("production").value = splitText[3];
+            typeScanner.clear();
+            // makeCodeType ();
+        } else {
+            alert("QR Code tidak valid atau format tidak sesuai. Coba scan QR yang lainnya.");
         }
+    }
+
+    document.getElementById("scanType").addEventListener("click", function () {
+        // let imgElement = document.querySelector("#qrcode_type img");
+        // if (imgElement) {
+        //     imgElement.src = "";
+        // }
+        typeScanner.render(onScanSuccessType);
     });
 
-    function onDecode(decodedText) {
-        qrScanner.stop();
+    // function makeCodeType () {    
+    //     var typeText = document.getElementById("Id_Type");
+    //     qrcode_type.makeCode(typeText.value);
+    // }
 
-        const split = decodedText.split(';');
-        if (split.length < 4) {
-            alert("QR Code tidak valid / format tidak sesuai.");
-            return;
-        }
-        document.getElementById("Id_Type").value = decodedText;
-        document.getElementById("no").value      = split[0];
-        document.getElementById("type").value    = split[2];
-        document.getElementById("production").value = split[3];
-    }
+    // $("#Id_Type").
+    // on("blur", function () {
+    //     makeCodeType();
+    // });
+
+    // function onScanSuccessArea(decodedText, decodedResult) {        
+    //     document.getElementById("Name_Area").value = decodedText;
+    //     areaScanner.clear();
+    //     // makeCodeArea ();
+    // }
+
+    // document.getElementById("scanArea").addEventListener("click", function () {
+    //     // let imgElement = document.querySelector("#qrcode_area img");
+    //     // if (imgElement) {
+    //     //     imgElement.src = "";
+    //     // }
+    //     areaScanner.render(onScanSuccessArea);
+    // });
+
+    // function makeCodeArea () {    
+    //     var areaText = document.getElementById("Name_Area");
+    //     qrcode_area.makeCode(areaText.value);
+    // }
+
+    // $("#Name_Area").
+    // on("blur", function () {
+    //     makeCodeArea();
+    // });
 </script>
 
 <script>
