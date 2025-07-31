@@ -63,12 +63,12 @@
             <span class="nav-link-text ms-1 {{ $page === 'track' ? 'text-white' : 'text-primary' }}">Track</span>
           </a>
         </li>
-        <li class="nav-item">
+        {{-- <li class="nav-item">
           <a class="nav-link {{ $page === 'track2' ? 'active bg-gradient-primary text-white' : 'text-dark' }}" href="{{ route('track2') }}">
             <i class="material-symbols-rounded opacity-5">view_in_ar</i>
             <span class="nav-link-text ms-1 {{ $page === 'track2' ? 'text-white' : 'text-primary' }}">Track 2</span>
           </a>
-        </li>
+        </li> --}}
         <li class="nav-item">
           <a class="nav-link {{ $page === 'report' ? 'active bg-gradient-primary text-white' : 'text-dark' }}" href="{{ route('user_report') }}">
             <i class="material-symbols-rounded opacity-5">table_view</i>
