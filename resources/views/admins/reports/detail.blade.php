@@ -59,7 +59,7 @@
           {{-- <p class="text-sm text-secondary mb-1">No: {{ $No }}</p>
           <h4 class="mb-1 text-md text-primary">Type: {{ $Name_Type }}</h4>
           <p class="text-sm text-secondary mb-1">Production: {{ $Production }}</p> --}}
-          <p class="text-lg text-secondary mb-1">Instuction Number: <b class="text-primary">{{ $No }}</b></p>
+          <p class="text-lg text-secondary mb-1">Instruction Number: <b class="text-primary">{{ $No }}</b></p>
         </div>
       </div>
       <div class="col-lg-4 col-md-6 my-sm-auto ms-sm-auto me-sm-0 mx-auto mt-3">
