@@ -45,7 +45,7 @@
             $Production = $types[3];
         @endphp
         @endforeach
-        <h2 class="text-primary">{{ $Name_Type }}</h2>
+        <h2 class="text-primary">{{ $No }}</h2>
     </div>
     <span class="mask bg-gradient-dark opacity-6 position-absolute top-0 start-0 w-100 h-100 z-index-0"></span>
   </div>
@@ -56,9 +56,10 @@
           <h5 class="mb-0 text-body">Tractor <span class="material-symbols-rounded">agriculture</span></h5>
         </div>
         <div class="card-body p-3">
-          <p class="text-sm text-secondary mb-1">No: {{ $No }}</p>
+          {{-- <p class="text-sm text-secondary mb-1">No: {{ $No }}</p>
           <h4 class="mb-1 text-md text-primary">Type: {{ $Name_Type }}</h4>
-          <p class="text-sm text-secondary mb-1">Production: {{ $Production }}</p>
+          <p class="text-sm text-secondary mb-1">Production: {{ $Production }}</p> --}}
+          <p class="text-lg text-secondary mb-1">Instuction Number: <b class="text-primary">{{ $No }}</b></p>
         </div>
       </div>
       <div class="col-lg-4 col-md-6 my-sm-auto ms-sm-auto me-sm-0 mx-auto mt-3">
@@ -72,7 +73,7 @@
             </div>
           </div>
           <div class="card-body p-3">
-            <a href="{{ route('report.export', $track->Id_Type) }}" class="btn btn-primary">
+            <a href="{{ route('report.export', $No) }}" class="btn btn-primary">
               Download<span class="mx-2"><i class="fas fa-download text-sm"></i></span>
             </a>
           </div>
@@ -112,6 +113,11 @@
                 Area: <span class="text-primary"> {{ $track->area->Name_Area }}</span>
               </p>
             </div>
+          </div>
+          <div class="col-lg-4 col-md-6 my-sm-auto ms-sm-auto me-sm-0 mx-auto mt-3">
+            <p class="text-sm text-secondary mb-1">No: {{ $No }}</p>
+            <h4 class="mb-1 text-md text-primary">Type: {{ $Name_Type }}</h4>
+            <p class="text-sm text-secondary mb-1">Production: {{ $Production }}</p>
           </div>
           <div class="col-lg-4 col-md-6 my-sm-auto ms-sm-auto me-sm-0 mx-auto mt-3">
             <div class="nav-wrapper position-relative end-0">

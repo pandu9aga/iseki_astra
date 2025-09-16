@@ -12,71 +12,63 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReportController extends Controller
 {
-    public function index(){
+    public function index()
+    {
         $page = 'report';
         $inputDate = Carbon::today()->toDateString();
 
         $Id_User = session('Id_User');
         $user = User::find($Id_User);
 
-        // Step 1: Cari semua Id_Type dan tanggal pertama kali mereka muncul
-        $firstAppearances = Track::select('Id_Type', DB::raw('MIN(DATE(Time_Track)) as first_date'))
-            ->groupBy('Id_Type')
-            ->pluck('first_date', 'Id_Type'); // hasil: [Id_Type => 'YYYY-MM-DD']
+        $top50 = Track::selectRaw("CAST(SUBSTRING_INDEX(Id_Type, ';', 1) AS UNSIGNED) as instruksi_no, Id_Type")
+            ->orderByDesc('instruksi_no')
+            ->groupBy('instruksi_no', 'Id_Type')
+            ->limit(50)
+            ->pluck('instruksi_no')
+            ->toArray();
 
-        // Step 2: Filter Id_Type yang first_date-nya sama dengan tanggal input
-        $idTypesForDate = $firstAppearances->filter(function ($date) use ($inputDate) {
-            return $date === $inputDate;
-        })->keys(); // Ambil hanya key-nya (Id_Type)
-
-        // Step 3: Ambil semua track yang memiliki Id_Type tersebut (semua tanggal, bukan hanya tanggal input)
-        $tracks = Track::whereIn('Id_Type', $idTypesForDate)
+        $tracks = Track::whereRaw("CAST(SUBSTRING_INDEX(Id_Type, ';', 1) AS UNSIGNED) IN (" . implode(',', $top50) . ")")
             ->with('user', 'area', 'track_photo')
-            ->orderBy('Time_Track')
+            ->orderBy('Id_Type', 'desc')
             ->get();
 
-        $date = \Carbon\Carbon::parse($inputDate)->isoFormat('YYYY-MM-DD');
+        // Group berdasarkan nomor instruksi (prefix)
+        $groupedTracks = $tracks->groupBy(function ($track) {
+            return explode(';', $track->Id_Type)[0] ?? null;
+        });
 
-        // Step 4: Kelompokkan berdasarkan Id_Type
-        $groupedTracks = $tracks->groupBy('Id_Type');
-
-        return view('admins.reports.index', compact('page', 'user', 'groupedTracks', 'date'));
+        return view('admins.reports.index', compact('page', 'user', 'groupedTracks'));
     }
 
-    public function submit(Request $request){
+    public function submit(Request $request)
+    {
         $page = 'report';
-        $inputDate = $request->input('Time_Track');
         $Id_User = session('Id_User');
         $user = User::find($Id_User);
 
-        // Step 1: Cari semua Id_Type dan tanggal pertama kali mereka muncul
-        $firstAppearances = Track::select('Id_Type', DB::raw('MIN(DATE(Time_Track)) as first_date'))
-            ->groupBy('Id_Type')
-            ->pluck('first_date', 'Id_Type'); // hasil: [Id_Type => 'YYYY-MM-DD']
+        $startNo = $request->input('start_no');
+        $endNo   = $request->input('end_no');
 
-        // Step 2: Filter Id_Type yang first_date-nya sama dengan tanggal input
-        $idTypesForDate = $firstAppearances->filter(function ($date) use ($inputDate) {
-            return $date === $inputDate;
-        })->keys(); // Ambil hanya key-nya (Id_Type)
-
-        // Step 3: Ambil semua track yang memiliki Id_Type tersebut (semua tanggal, bukan hanya tanggal input)
-        $tracks = Track::whereIn('Id_Type', $idTypesForDate)
+        // Ambil semua Id_Type sesuai range nomor instruksi (prefix sebelum ;)
+        $tracks = Track::whereRaw("CAST(SUBSTRING_INDEX(Id_Type, ';', 1) AS UNSIGNED) BETWEEN ? AND ?", [$startNo, $endNo])
             ->with('user', 'area', 'track_photo')
-            ->orderBy('Time_Track')
+            ->orderBy('Id_Type', 'desc')
             ->get();
 
-        $date = \Carbon\Carbon::parse($inputDate)->isoFormat('YYYY-MM-DD');
+        // Group berdasarkan prefix (nomor instruksi), isi tetap full Id_Type
+        $groupedTracks = $tracks->groupBy(function ($track) {
+            return explode(';', $track->Id_Type)[0] ?? null;
+        });
 
-        // Step 4: Kelompokkan berdasarkan Id_Type
-        $groupedTracks = $tracks->groupBy('Id_Type');
-
-        return view('admins.reports.index', compact('page', 'user', 'groupedTracks', 'date'));
+        return view('admins.reports.index', compact('page', 'user', 'groupedTracks', 'startNo', 'endNo'));
     }
+
 
     public function detail(string $Id_Type){
         $page = 'report';
 
-        $tracks = Track::where('Id_Type', $Id_Type)
+        // $tracks = Track::where('Id_Type', $Id_Type)
+        $tracks = Track::where('Id_Type', 'like', $Id_Type.';%')
         ->with('user')
         ->with('area')
         ->with('track_photo')
@@ -98,7 +90,8 @@ class ReportController extends Controller
 
     public function export(string $Id_Type)
     {
-        $tracks = Track::where('Id_Type', $Id_Type)
+        // $tracks = Track::where('Id_Type', $Id_Type)
+        $tracks = Track::where('Id_Type', 'like', $Id_Type.';%')
             ->with('user')
             ->with('area')
             ->with('track_photo')

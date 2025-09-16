@@ -45,12 +45,19 @@
                 <div class="card-body px-0 pb-2">
                     <div class="table-responsive p-0">
                         <form role="form" class="mx-3 my-3" action="{{ route('report.submit') }}" method="GET">
-							@csrf
+                            @csrf
                             <div class="container-fluid">
                                 <div class="row">
-                                    <div class="col-6 col-sm-4">
+                                    <div class="col-6 col-sm-3">
                                         <div class="input-group input-group-outline">
-                                            <input type="date" name="Time_Track" class="form-control" value="{{ $date }}">
+                                            <label class="form-label">Start No (ex: 1000)</label>
+                                            <input type="text" name="start_no" class="form-control" value="{{ request('start_no') }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-sm-3">
+                                        <div class="input-group input-group-outline">
+                                            <label class="form-label">End No (ex: 1100)</label>
+                                            <input type="text" name="end_no" class="form-control" value="{{ request('end_no') }}" required>
                                         </div>
                                     </div>
                                     <div class="col-2">
@@ -75,12 +82,12 @@
                             </thead>
                             <tbody>
                                 @foreach ( $groupedTracks as $idType => $group )
-                                    @php
+                                    {{-- @php
                                         $types = explode(';', $idType);
                                         $no = $types[0] ?? '';
                                         $nameType = $types[2] ?? '';
                                         $production = $types[3] ?? '';
-                                    @endphp
+                                    @endphp --}}
 									<tr>
 										<td class="align-middle text-center">
 											<p class="text-xs font-weight-bold text-secondary">{{ $loop->iteration }}</p>
@@ -101,9 +108,18 @@
                                         <td>
                                             <a href="{{ route('report.detail', ['Id_Type' => $idType]) }}">
                                                 <div class="d-flex flex-column justify-content-center">
-                                                    <p class="text-xs text-secondary mb-0">{{ $no }}</p>
+                                                    {{-- <p class="text-xs text-secondary mb-0">{{ $no }}</p>
                                                     <h6 class="mb-0 text-sm text-primary">{{ $nameType }}</h6>
-                                                    <p class="text-xs text-secondary mb-0">{{ $production }}</p>
+                                                    <p class="text-xs text-secondary mb-0">{{ $production }}</p> --}}
+                                                    @foreach($group as $track)
+                                                    @php
+                                                        $types = explode(';', $track->Id_Type);
+                                                        $no = $types[0] ?? '';
+                                                        $nameType = $types[2] ?? '';
+                                                        $production = $types[3] ?? '';
+                                                    @endphp
+                                                        <span class="text-xs text-secondary mb-0"><span class="text-primary">{{ $no }}</span> ; {{ $nameType }} ; {{ $production }}</span>
+                                                    @endforeach
                                                 </div>
                                             </a>
                                         </td>
