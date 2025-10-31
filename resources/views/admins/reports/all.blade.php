@@ -7,7 +7,8 @@
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb bg-transparent mb-0 pb-0 pt-1 px-0 me-sm-6 me-5">
                 <li class="breadcrumb-item text-sm"><a class="opacity-5 text-dark" href="javascript:;">Pages</a></li>
-                <li class="breadcrumb-item text-sm text-primary active" aria-current="page">Report</li>
+                <li class="breadcrumb-item text-sm"><a class="opacity-5 text-dark" href="{{ route('report.index') }}">Report</a></li>
+                <li class="breadcrumb-item text-sm text-primary active" aria-current="page">All Reports</li>
             </ol>
         </nav>
         <div class="collapse navbar-collapse mt-sm-0 mt-2 me-md-0 me-sm-4" id="navbar">
@@ -31,7 +32,7 @@
 <div class="container-fluid py-2">
     <div class="row">
         <div class="ms-3">
-            <h3 class="mb-4 h4 font-weight-bolder">Report</h3>
+            <h3 class="mb-4 h4 font-weight-bolder">All Reports</h3>
         </div>
     </div>
     <div class="row">
@@ -39,33 +40,17 @@
             <div class="card my-4">
                 <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
                     <div class="bg-gradient-primary shadow-dark border-radius-lg pt-4 pb-3">
-                        <h6 class="text-white text-capitalize ps-3">Report Table</h6>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="text-white text-capitalize ps-3 mb-0">All Report Data</h6>
+                            <a href="{{ route('report.index') }}" class="btn btn-sm btn-light me-3">
+                                <span class="material-symbols-rounded">arrow_back</span> Back to Report
+                            </a>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body px-0 pb-2">
                     <div class="table-responsive p-0">
-                        <div class="mx-3 my-3">
-                            <div class="container-fluid">
-                                <div class="row">
-                                    <div class="col-6 col-sm-4">
-                                        <div class="input-group input-group-outline">
-                                            <input type="date" name="Time_Track" id="Time_Track" class="form-control" value="{{ $date }}">
-                                        </div>
-                                    </div>
-                                    <div class="col-2">
-                                        <button id="filterBtn" class="btn btn-primary btn-sm">
-                                            <span class="material-symbols-rounded">filter_alt</span>
-                                        </button>
-                                    </div>
-                                    <div class="col-4 col-sm-6 text-end">
-                                        <a href="{{ route('report.index.all') }}" class="btn btn-info btn-sm">
-                                            <span class="material-symbols-rounded">list_alt</span> View All Reports
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <table id="reportTable" class="table align-items-center mb-0">
+                        <table id="reportAllTable" class="table align-items-center mb-0">
                             <thead>
                                 <tr>
                                     <th class="text-center text-uppercase text-primary text-xxs font-weight-bolder opacity-7">No</th>
@@ -96,16 +81,13 @@
 <script src="{{asset('assets/datatables/datatables.min.js')}}"></script>
 <script>
     $(document).ready(function() {
-        var table = $('#reportTable').DataTable({
+        var table = $('#reportAllTable').DataTable({
             processing: true,
             serverSide: true,
             pageLength: 50,
             lengthMenu: [[50, 100, 150, 200], [50, 100, 150, 200]],
             ajax: {
-                url: "{{ route('report.index') }}",
-                data: function(d) {
-                    d.Time_Track = $('#Time_Track').val();
-                }
+                url: "{{ route('report.index.all') }}"
             },
             columns: [
                 {
@@ -159,18 +141,7 @@
                 processing: '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>'
             }
         });
-
-        // Filter button click event
-        $('#filterBtn').on('click', function() {
-            table.ajax.reload();
-        });
-
-        // Enter key on date input
-        $('#Time_Track').on('keypress', function(e) {
-            if (e.which === 13) {
-                table.ajax.reload();
-            }
-        });
     });
 </script>
 @endsection
+

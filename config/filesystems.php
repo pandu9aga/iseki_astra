@@ -93,8 +93,8 @@ return [
 
     'links' => [
         // public_path('storage') => storage_path('app/public'),
-        public_path('uploads') => 'F:/iseki_astra/uploads',
-        public_path('downloads') => 'G:/iseki_astra/downloads',
+        public_path('uploads') => 'D:/iseki_astra/public_storage/uploads',
+        public_path('downloads') => 'D:/iseki_astra/public_storage/downloads',
     ],
 
 ];

@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="{{asset('assets/css/icon.css')}}" />
   <!-- CSS Files -->
   <link id="pagestyle" href="{{asset('assets/css/material-dashboard.css?v=3.2.0')}}" rel="stylesheet" />
-  
+
   @yield('style')
 
 </head>
@@ -58,12 +58,12 @@
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {{ $page === 'report' ? 'active bg-gradient-primary text-white' : 'text-dark' }}" href="{{ route('report') }}">
+          <a class="nav-link {{ $page === 'report' ? 'active bg-gradient-primary text-white' : 'text-dark' }}" href="{{ route('report.index') }}">
             <i class="material-symbols-rounded opacity-5">table_view</i>
             <span class="nav-link-text ms-1 {{ $page === 'report' ? 'text-white' : 'text-primary' }}">Report</span>
           </a>
         </li>
-        {{-- <li class="nav-item">
+        <li class="nav-item">
           <a class="nav-link {{ $page === 'checklist' ? 'active bg-gradient-primary text-white' : 'text-dark' }}" href="{{ route('checklist') }}">
             <i class="material-symbols-rounded opacity-5">task</i>
             <span class="nav-link-text ms-1 {{ $page === 'checklist' ? 'text-white' : 'text-primary' }}">Checklist</span>
@@ -74,7 +74,7 @@
             <i class="material-symbols-rounded opacity-5">receipt_long</i>
             <span class="nav-link-text ms-1 {{ $page === 'record' ? 'text-white' : 'text-primary' }}">Record</span>
           </a>
-        </li> --}}
+        </li>
         <li class="nav-item mt-3">
           <h6 class="ps-4 ms-2 text-uppercase text-xs text-dark font-weight-bolder opacity-5">Setting pages</h6>
         </li>
@@ -128,7 +128,7 @@
   <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg ">
 
     @yield('content')
-    
+
     <footer class="footer py-4  ">
         <div class="container-fluid">
             <div class="row align-items-center justify-content-lg-center">

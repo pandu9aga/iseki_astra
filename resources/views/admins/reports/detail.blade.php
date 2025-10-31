@@ -45,7 +45,7 @@
             $Production = $types[3];
         @endphp
         @endforeach
-        <h2 class="text-primary">{{ $No }}</h2>
+        <h2 class="text-primary">{{ $Name_Type }}</h2>
     </div>
     <span class="mask bg-gradient-dark opacity-6 position-absolute top-0 start-0 w-100 h-100 z-index-0"></span>
   </div>
@@ -56,10 +56,9 @@
           <h5 class="mb-0 text-body">Tractor <span class="material-symbols-rounded">agriculture</span></h5>
         </div>
         <div class="card-body p-3">
-          {{-- <p class="text-sm text-secondary mb-1">No: {{ $No }}</p>
+          <p class="text-sm text-secondary mb-1">No: {{ $No }}</p>
           <h4 class="mb-1 text-md text-primary">Type: {{ $Name_Type }}</h4>
-          <p class="text-sm text-secondary mb-1">Production: {{ $Production }}</p> --}}
-          <p class="text-lg text-secondary mb-1">Instruction Number: <b class="text-primary">{{ $No }}</b></p>
+          <p class="text-sm text-secondary mb-1">Production: {{ $Production }}</p>
         </div>
       </div>
       <div class="col-lg-4 col-md-6 my-sm-auto ms-sm-auto me-sm-0 mx-auto mt-3">
@@ -73,7 +72,7 @@
             </div>
           </div>
           <div class="card-body p-3">
-            <a href="{{ route('report.export', $No) }}" class="btn btn-primary">
+            <a href="{{ route('report.export', $track->Id_Type) }}" class="btn btn-primary">
               Download<span class="mx-2"><i class="fas fa-download text-sm"></i></span>
             </a>
           </div>
@@ -82,7 +81,7 @@
       <div class="col-lg-4 col-md-6 my-sm-auto ms-sm-auto me-sm-0 mx-auto mt-3">
           <div class="nav-wrapper position-relative end-0">
               Back to:
-              <a href="{{ route('report') }}">
+              <a href="{{ route('report.index') }}">
                   <h4 class="text-primary">List Report <span class="material-symbols-rounded">arrow_forward</span></h4>
               </a>
           </div>
@@ -113,11 +112,6 @@
                 Area: <span class="text-primary"> {{ $track->area->Name_Area }}</span>
               </p>
             </div>
-          </div>
-          <div class="col-lg-4 col-md-6 my-sm-auto ms-sm-auto me-sm-0 mx-auto mt-3">
-            <p class="text-sm text-secondary mb-1">No: {{ $No }}</p>
-            <h4 class="mb-1 text-md text-primary">Type: {{ $Name_Type }}</h4>
-            <p class="text-sm text-secondary mb-1">Production: {{ $Production }}</p>
           </div>
           <div class="col-lg-4 col-md-6 my-sm-auto ms-sm-auto me-sm-0 mx-auto mt-3">
             <div class="nav-wrapper position-relative end-0">
@@ -230,7 +224,67 @@
   </div>
 </div>
 @endsection
+
+@section('style')
+<style>
+  .image-container {
+    width: 100%;
+    height: 70vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.5);
+    position: relative;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .image-container.panning {
+    cursor: grabbing;
+  }
+
+  .zoomable-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  .zoom-info {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  .modal-btn {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    transition: all 0.3s ease;
+  }
+
+  .modal-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+  }
+</style>
+@endsection
+
 @section('script')
+<!-- PanZoom Library -->
+<script src="{{asset('assets/js/panzoom.min.js')}}"></script>
+
 <script>
   const galleryImages = document.querySelectorAll('.gallery-img');
   const carouselInner = document.getElementById('carousel-inner');
@@ -250,41 +304,35 @@
   }));
 
   let currentIndex = 0;
-  let zoomLevel = 1;
-
-  function updateZoom() {
-    const img = document.querySelector('.carousel-item.active img');
-    if (img) {
-      img.style.transform = `scale(${zoomLevel})`;
-    }
-  }
-
-  document.getElementById('zoomIn').addEventListener('click', () => {
-    zoomLevel += 0.2;
-    updateZoom();
-  });
-
-  document.getElementById('zoomOut').addEventListener('click', () => {
-    zoomLevel = Math.max(0.2, zoomLevel - 0.2);
-    updateZoom();
-  });
+  let panzoomInstances = [];
+  let currentPanzoom = null;
 
   // Event klik gambar
   galleryImages.forEach((img, index) => {
     img.addEventListener('click', () => {
       carouselInner.innerHTML = '';
       currentIndex = index;
-      zoomLevel = 1;
+
+      // Clear previous panzoom instances
+      panzoomInstances.forEach(instance => {
+        if (instance) instance.destroy();
+      });
+      panzoomInstances = [];
 
       images.forEach((image, i) => {
         const isActive = i === index ? 'active' : '';
         carouselInner.innerHTML += `
           <div class="carousel-item ${isActive}">
-            <div class="image-container">
-              <img src="${image.src}" class="img-fluid zoomable-image" alt="${image.alt}">
+            <div class="image-container" data-index="${i}">
+              <div class="zoom-info">
+                <span class="zoom-level">100%</span> |
+                <span class="material-symbols-rounded" style="font-size: 14px; vertical-align: middle;">pan_tool</span> Drag to pan |
+                <span class="material-symbols-rounded" style="font-size: 14px; vertical-align: middle;">mouse</span> Scroll to zoom
+              </div>
+              <img src="${image.src}" class="zoomable-image" alt="${image.alt}">
             </div>
           </div>
-          `;
+        `;
       });
 
       // Caption pertama kali
@@ -297,89 +345,123 @@
       const modal = new bootstrap.Modal(document.getElementById('imageGalleryModal'));
       modal.show();
 
-      setTimeout(updateZoom, 200);
+      // Initialize PanZoom after modal is shown
+      setTimeout(() => {
+        initializePanZoom();
+      }, 300);
     });
   });
 
-  // Update caption saat slide berubah
+  function initializePanZoom() {
+    const containers = document.querySelectorAll('.image-container');
+
+    containers.forEach((container, idx) => {
+      const img = container.querySelector('img');
+      const zoomInfo = container.querySelector('.zoom-level');
+
+      if (!img) return;
+
+      // Initialize Panzoom
+      const panzoom = Panzoom(img, {
+        maxScale: 5,
+        minScale: 0.5,
+        step: 0.3,
+        cursor: 'grab',
+        canvas: true,
+        animate: true,
+        duration: 300,
+        easing: 'ease-in-out',
+        contain: 'outside',
+        excludeClass: 'no-panzoom'
+      });
+
+      panzoomInstances[idx] = panzoom;
+
+      // Set current panzoom for active slide
+      if (container.parentElement.classList.contains('active')) {
+        currentPanzoom = panzoom;
+      }
+
+      // Update zoom level display
+      container.addEventListener('panzoomchange', (event) => {
+        const scale = event.detail.scale;
+        if (zoomInfo) {
+          zoomInfo.textContent = Math.round(scale * 100) + '%';
+        }
+      });
+
+      // Add panning cursor effect
+      container.addEventListener('panzoomstart', () => {
+        container.classList.add('panning');
+      });
+
+      container.addEventListener('panzoomend', () => {
+        container.classList.remove('panning');
+      });
+
+      // Enable wheel zoom on container
+      container.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        panzoom.zoomWithWheel(e);
+      });
+
+      // Reset on double click
+      container.addEventListener('dblclick', () => {
+        panzoom.reset({
+          animate: true,
+          duration: 300
+        });
+      });
+    });
+  }
+
+  // Zoom In Button
+  document.getElementById('zoomIn').addEventListener('click', () => {
+    if (currentPanzoom) {
+      currentPanzoom.zoomIn({
+        animate: true
+      });
+    }
+  });
+
+  // Zoom Out Button
+  document.getElementById('zoomOut').addEventListener('click', () => {
+    if (currentPanzoom) {
+      currentPanzoom.zoomOut({
+        animate: true
+      });
+    }
+  });
+
+  // Update caption dan current panzoom saat slide berubah
   document.getElementById('carouselGallery').addEventListener('slid.bs.carousel', (e) => {
     currentIndex = e.to;
-    zoomLevel = 1;
-    updateZoom();
+
+    // Update current panzoom instance
+    const activeContainer = document.querySelector('.carousel-item.active .image-container');
+    const containerIndex = activeContainer ? parseInt(activeContainer.dataset.index) : 0;
+    currentPanzoom = panzoomInstances[containerIndex];
+
+    // Reset zoom on slide change
+    if (currentPanzoom) {
+      currentPanzoom.reset({
+        animate: false
+      });
+    }
 
     captionLabelTop.textContent = images[currentIndex].title1;
     captionLabelBottom.textContent = images[currentIndex].title2;
     captionLabelArrow.textContent = images[currentIndex].title3;
     captionLabelArea.textContent = images[currentIndex].title4;
   });
-</script>
 
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    function setupDragging(container) {
-      let isDown = false;
-      let startX, startY, scrollLeft, scrollTop;
-
-      container.addEventListener('mousedown', (e) => {
-        isDown = true;
-        container.classList.add('dragging');
-        startX = e.pageX - container.offsetLeft;
-        startY = e.pageY - container.offsetTop;
-        scrollLeft = container.scrollLeft;
-        scrollTop = container.scrollTop;
-      });
-
-      container.addEventListener('mouseleave', () => {
-        isDown = false;
-        container.classList.remove('dragging');
-      });
-
-      container.addEventListener('mouseup', () => {
-        isDown = false;
-        container.classList.remove('dragging');
-      });
-
-      container.addEventListener('mousemove', (e) => {
-        if (!isDown) return;
-        e.preventDefault();
-        const x = e.pageX - container.offsetLeft;
-        const y = e.pageY - container.offsetTop;
-        const walkX = (x - startX);
-        const walkY = (y - startY);
-        container.scrollLeft = scrollLeft - walkX;
-        container.scrollTop = scrollTop - walkY;
-      });
-
-      // Mobile support
-      container.addEventListener('touchstart', (e) => {
-        isDown = true;
-        startX = e.touches[0].pageX - container.offsetLeft;
-        startY = e.touches[0].pageY - container.offsetTop;
-        scrollLeft = container.scrollLeft;
-        scrollTop = container.scrollTop;
-      });
-
-      container.addEventListener('touchend', () => {
-        isDown = false;
-      });
-
-      container.addEventListener('touchmove', (e) => {
-        if (!isDown) return;
-        const x = e.touches[0].pageX - container.offsetLeft;
-        const y = e.touches[0].pageY - container.offsetTop;
-        const walkX = (x - startX);
-        const walkY = (y - startY);
-        container.scrollLeft = scrollLeft - walkX;
-        container.scrollTop = scrollTop - walkY;
-      });
-    }
-
-    // Setelah modal muncul, pasang event pada semua .image-container
-    document.getElementById('imageGalleryModal').addEventListener('shown.bs.modal', () => {
-      document.querySelectorAll('.image-container').forEach(container => {
-        setupDragging(container);
-      });
+  // Clean up panzoom instances when modal is hidden
+  document.getElementById('imageGalleryModal').addEventListener('hidden.bs.modal', () => {
+    panzoomInstances.forEach(instance => {
+      if (instance) instance.destroy();
     });
+    panzoomInstances = [];
+    currentPanzoom = null;
   });
 </script>
 @endsection

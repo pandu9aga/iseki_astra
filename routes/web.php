@@ -57,8 +57,8 @@ Route::middleware(AdminMiddleware::class)->group(function () {
     Route::get('/profile', [ProfileController::class, 'index'])->name('profile');
     Route::put('/profile/update/{Id_User}', [ProfileController::class, 'update'])->name('profile.update');
 
-    Route::get('/report', [ReportController::class, 'index'])->name('report');
-    Route::get('/report/submit', [ReportController::class, 'submit'])->name('report.submit');
+    Route::get('/report', [ReportController::class, 'index'])->name('report.index');
+    Route::get('/report/all', [ReportController::class, 'indexAll'])->name('report.index.all');
     Route::get('/report/detail/{Id_Type}', [ReportController::class, 'detail'])->name('report.detail');
     // Route::put('/report/approvement/{Id_Track}', [ReportController::class, 'approvement'])->name('report.approvement');
     Route::get('/report/export/{Id_Type}', [ReportController::class, 'export'])->name('report.export');
