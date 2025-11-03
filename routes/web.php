@@ -85,7 +85,8 @@ Route::middleware(AuthMiddleware::class)->group(function () {
 
     Route::get('/track', [TrackController::class, 'index'])->name('track');
     Route::get('/track2', [TrackController::class, 'index2'])->name('track2');
-    Route::post('/track', [TrackController::class, 'store'])->name('track.store');
+    Route::post('/track', [TrackController::class, 'storenew'])->name('track.store');
+    Route::post('/track/validate-rule', [TrackController::class, 'validateRule'])->name('track.validate_rule');
 
     Route::get('/user_report', [UserReportController::class, 'index'])->name('user_report');
     Route::get('/user_report/submit', [UserReportController::class, 'submit'])->name('user_report.submit');

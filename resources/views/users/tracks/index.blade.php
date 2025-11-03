@@ -50,14 +50,13 @@
                     <p class="text-sm">Assembling process tracking</p>
                 </div>
                 <div class="row">
-                    <form action="{{ route('track.store') }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('track.store') }}" method="POST" enctype="multipart/form-data" id="trackForm">
                         @csrf
                         <div class="row">
                             <div class="col-lg-4">
                                 <span style="font-size: small;">QR Code Type</span>
                                 <div class="container-fluid d-flex justify-content-start p-0">
                                     <div id="reader_type" class="mx-auto"></div>
-                                    {{-- <div id="qrcode_type"></div> --}}
                                 </div>
                                 <br>
                                 <button type="button" id="scanType" class="btn btn-primary btn-sm px-4">
@@ -94,14 +93,8 @@
                             <div class="col-lg-4">
                                 <span style="font-size: small;">Area</span>
                                 <div class="container-fluid d-flex justify-content-start p-0">
-                                    {{-- <div id="reader_area" class="mx-auto" ></div> --}}
-                                    {{-- <div id="qrcode_area"></div> --}}
-                                    {{-- Kode area sudah otomatis terisi (tidak perlu scan QR lagi) --}}
+                                    {{-- Area otomatis terisi dari session/user --}}
                                 </div>
-                                {{-- <br> --}}
-                                {{-- <button type="button" id="scanArea" class="btn btn-primary btn-sm px-4">
-                                    Scan
-                                </button> --}}
                             </div>
                             <div class="col-lg-8">
                                 <p class="text-sm">Selected Area:</p>
@@ -116,6 +109,13 @@
                             </div>
                         </div>
                         <br>
+
+                        <!-- Tambahkan div untuk notifikasi validasi rule -->
+                        <div id="validation-error-message" class="alert alert-danger alert-dismissible fade show mb-3" role="alert" style="display: none;">
+                            <strong id="validation-error-text"></strong>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+
                         <div class="mb-2 ps-3">
                             <h6 class="text-primary mb-1">Upload Photos:</h6>
                         </div>
@@ -126,7 +126,7 @@
                                     <label class="form-label text-primary d-block">{{ $part->photo_angle->Name_Photo_Angle }} <span class="material-symbols-rounded">{{ $part->photo_angle->Icon_Photo_Angle }}</span></label>
                                     <div class="input-group input-group-outline my-3 is-filled @error($part) is-invalid @enderror">
                                         <label class="form-label">{{ $part->photo_angle->Name_Photo_Angle }}</label>
-                                        <input type="file" class="form-control image-input" name="{{ $part->photo_angle->Id_Photo_Angle }}" data-preview="#preview-{{ $part->photo_angle->Id_Photo_Angle }}" accept="image/*" capture="environment">
+                                        <input type="file" class="form-control image-input" name="{{ $part->photo_angle->Id_Photo_Angle }}" data-preview="#preview-{{ $part->photo_angle->Id_Photo_Angle }}" accept="image/*" capture="environment" id="photoInput_{{ $part->photo_angle->Id_Photo_Angle }}">
                                     </div>
                                     <div class="invalid-feedback">You must upload this photo.</div>
                                     @error($part)
@@ -140,8 +140,7 @@
                         </div>
                         <div class="row justify-content-center mt-4 mb-3">
                             <div class="col-lg-6">
-                                <button type="submit" class="btn btn-primary w-100">Submit</button>
-                                {{-- <button type="submit" class="btn btn-primary" onclick="this.disabled=true; this.form.submit();">Submit</button> --}}
+                                <button type="submit" class="btn btn-primary w-100" id="submitBtn">Submit</button>
                             </div>
                         </div>
                     </form>
@@ -176,6 +175,9 @@
         </div>
     </div>
 </div>
+@endsection
+@section('style')
+<meta name="csrf-token" content="{{ csrf_token() }}">
 @endsection
 @section('script')
 <!-- QR Code Library -->
@@ -233,21 +235,97 @@
 
         if (splitText.length >= 4) {
             document.getElementById("Id_Type").value = decodedText;
-            document.getElementById("no").value = splitText[0];
+            const sequenceNo = splitText[0]; // Ambil sequence number
+            document.getElementById("no").value = sequenceNo; // Set no
             document.getElementById("type").value = splitText[2];
             document.getElementById("production").value = splitText[3];
+
+            // --- Tambahkan: Validasi Rule ke Server Astra ---
+            // Kita asumsikan area tidak berubah, ambil dari hidden input atau view
+            const areaName = document.getElementById("Name_Area").value;
+
+            // Pastikan areaName tidak kosong sebelum memanggil validasi
+            if (areaName) {
+                validateRuleOnServer(sequenceNo, areaName);
+            } else {
+                console.error("Nama Area tidak ditemukan.");
+                document.getElementById('validation-error-text').textContent = 'Gagal memvalidasi: Nama Area tidak valid.';
+                document.getElementById('validation-error-message').style.display = 'block';
+                disableForm();
+            }
+
             typeScanner.clear();
-            // makeCodeType ();
         } else {
             alert("QR Code tidak valid atau format tidak sesuai. Coba scan QR yang lainnya.");
         }
     }
 
+    // Fungsi untuk validasi rule ke server Astra
+    async function validateRuleOnServer(sequenceNo, areaName) {
+        // Sembunyikan notifikasi error sebelumnya
+        document.getElementById('validation-error-message').style.display = 'none';
+
+        // Disable tombol submit dan semua upload foto sementara
+        disableForm();
+
+        try {
+            const response = await fetch('{{ route("track.validate_rule") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    sequence_no: sequenceNo,
+                    area_name: areaName
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                // Validasi sukses, proses sebelumnya selesai
+                console.log('Validasi rule berhasil:', data.message);
+                // Enable tombol submit dan upload foto
+                enableForm();
+            } else {
+                // Validasi gagal, proses sebelumnya belum selesai
+                console.error('Validasi rule gagal:', data.message);
+                // Tampilkan notifikasi error besar
+                document.getElementById('validation-error-text').textContent = data.message;
+                document.getElementById('validation-error-message').style.display = 'block';
+                // Keep tombol submit dan upload foto disabled
+                disableForm();
+            }
+        } catch (error) {
+            console.error('Error saat validasi rule:', error);
+            // Tampilkan notifikasi error umum
+            document.getElementById('validation-error-text').textContent = 'Gagal menghubungi server untuk validasi rule.';
+            document.getElementById('validation-error-message').style.display = 'block';
+            // Keep tombol submit dan upload foto disabled
+            disableForm();
+        }
+    }
+
+    // Fungsi untuk disable form
+    function disableForm() {
+        document.getElementById('submitBtn').disabled = true;
+        // Disable semua input file foto
+        document.querySelectorAll('.image-input').forEach(input => {
+            input.disabled = true;
+        });
+    }
+
+    // Fungsi untuk enable form
+    function enableForm() {
+        document.getElementById('submitBtn').disabled = false;
+        // Enable semua input file foto
+        document.querySelectorAll('.image-input').forEach(input => {
+            input.disabled = false;
+        });
+    }
+
     document.getElementById("scanType").addEventListener("click", function () {
-        // let imgElement = document.querySelector("#qrcode_type img");
-        // if (imgElement) {
-        //     imgElement.src = "";
-        // }
         typeScanner.render(onScanSuccessType);
     });
 

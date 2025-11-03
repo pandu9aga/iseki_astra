@@ -4,6 +4,8 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\User;
 use App\Models\Area;
 use App\Models\Track;
@@ -113,5 +115,278 @@ class TrackController extends Controller
         }
 
         return redirect()->route('user_report')->with('success', 'Tracking data uploaded successfully!');
+    }
+
+    public function storenew(Request $request)
+    {
+        // Validasi input teks wajib
+        $request->validate([
+            'Id_User' => 'required',
+            'no' => 'required',
+            'type' => 'required',
+            'production' => 'required',
+            'Id_Type' => 'required',
+            'Name_Area' => 'required',
+        ]);
+
+        // Ambil sequence_no dan area_name dari request
+        $sequenceNo = $request->no; // Ini adalah 'no' dari form
+        $areaName = $request->Name_Area; // Ini adalah 'Name_Area' dari form
+
+        // --- LOGIKA UPDATE RECORD DI DATABASE PODIUM LANGSUNG (Setelah validasi atau sebelumnya) ---
+        // --- PERUBAHAN: Format sequence_no ---
+        $sequenceNoFormatted = str_pad($sequenceNo, 5, '0', STR_PAD_LEFT);
+        $timestamp = Carbon::now()->format('Y-m-d H:i:s');
+
+        // Ubah area_name menjadi process_name
+        $processName = 'astra_' . strtolower(str_replace(' ', '_', $areaName));
+
+        try {
+            // 1. Cari plan di database PODIUM berdasarkan Sequence_No_Plan
+            $plan = DB::connection('podium')->table('plans')->where('Sequence_No_Plan', $sequenceNoFormatted)->first();
+            if (!$plan) {
+                return redirect()->back()->withErrors(['general' => "Plan dengan Sequence_No_Plan '{$sequenceNoFormatted}' tidak ditemukan di sistem PODIUM."]);
+            }
+
+            $modelName = $plan->Model_Name_Plan;
+
+            // 2. Cari rule di database PODIUM berdasarkan Type_Rule
+            $rule = DB::connection('podium')->table('rules')->where('Type_Rule', $modelName)->first();
+            if (!$rule) {
+                return redirect()->back()->withErrors(['general' => "Rule untuk model '{$modelName}' tidak ditemukan di sistem PODIUM."]);
+            }
+
+            // 3. Ambil Rule_Rule (ini berupa string JSON dari Query Builder)
+            $ruleSequenceRaw = $rule->Rule_Rule;
+            $ruleSequence = null;
+            if (is_string($ruleSequenceRaw)) {
+                $ruleSequence = json_decode($ruleSequenceRaw, true);
+            }
+            if (!is_array($ruleSequence)) {
+                return redirect()->back()->withErrors(['general' => "Format rule untuk model '{$modelName}' rusak."]);
+            }
+
+            // 4. Cek apakah process_name (area yang sedang diproses) ada dalam rule
+            $position = null;
+            foreach ($ruleSequence as $key => $process) {
+                if ($process === $processName) {
+                    $position = (int)$key;
+                    break;
+                }
+            }
+
+            if ($position === null) {
+                return redirect()->back()->withErrors(['general' => "Proses '{$processName}' (Area: {$areaName}) tidak termasuk dalam rule untuk model '{$modelName}'."]);
+            }
+
+            // 5. Ambil Record_Plan (ini berupa string JSON dari Query Builder)
+            $recordRaw = $plan->Record_Plan;
+            $record = [];
+            if (is_string($recordRaw) && !empty($recordRaw)) {
+                $decodedRecord = json_decode($recordRaw, true);
+                if (is_array($decodedRecord)) {
+                    $record = $decodedRecord;
+                } else {
+                    return redirect()->back()->withErrors(['general' => "Format Record_Plan untuk plan ini rusak."]);
+                }
+            }
+
+            // 7. Update record: tambahkan proses dan timestamp
+            $record[$processName] = $timestamp;
+
+            // 8. Simpan kembali ke database PODIUM
+            DB::connection('podium')->table('plans')
+                ->where('Id_Plan', $plan->Id_Plan)
+                ->update(['Record_Plan' => json_encode($record, JSON_UNESCAPED_UNICODE)]);
+
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['general' => 'Gagal mencatat ke sistem PODIUM: ' . $e->getMessage()]);
+        }
+
+        // --- LANJUTKAN LOGIKA LAMA SIMPAN KE DATABASE ASTRA ---
+        // Cari area berdasarkan nama
+        $area = Area::where('Name_Area', $areaName)->first(); // Gunakan $areaName dari request
+        if (!$area) {
+            return redirect()->back()->withErrors(['Name_Area' => 'Area not found.']);
+        }
+
+        // Ambil daftar bagian gambar (angle) berdasarkan area
+        $areaPhotos = Area_Photo::with('photo_angle')->where('Id_Area', $area->Id_Area)->get();
+
+        // Validasi dinamis input file
+        $dynamicValidation = [];
+        foreach ($areaPhotos as $photo) {
+            $fieldName = (string) $photo->photo_angle->Id_Photo_Angle;
+            $dynamicValidation[$fieldName] = 'required|image';
+        }
+        $request->validate($dynamicValidation);
+
+        // Potong Id_Type jadi hanya 4 bagian awal
+        $parts = explode(';', $request->Id_Type);
+        $filteredIdType = implode(';', array_slice($parts, 0, 4));
+
+        $exists = Track::where('Id_User', $request->Id_User)
+            ->where('Id_Type', $filteredIdType)
+            ->where('Id_Area', $area->Id_Area)
+            ->whereBetween('Time_Track', [
+                Carbon::now()->subSeconds(10),
+                Carbon::now()->addSeconds(10)
+            ])
+            ->exists();
+        if ($exists) {
+            return redirect()->route('user_report')->withErrors('Tracking data already submitted for today!');
+        }
+
+        // Simpan data track
+        $track = Track::create([
+            'Id_User' => $request->Id_User,
+            'Id_Type' => $filteredIdType,
+            'Id_Area' => $area->Id_Area,
+            'Time_Track' => Carbon::now(),
+            'Status_Track' => 0,
+        ]);
+
+        // Simpan semua file foto ke track_photos
+        foreach ($areaPhotos as $photo) {
+            $angle = $photo->photo_angle;
+            $fieldName = (string) $angle->Id_Photo_Angle;
+
+            if ($request->hasFile($fieldName)) {
+                $path = $request->file($fieldName)->store("track", 'uploads');
+
+                Track_Photo::create([
+                    'Id_Track' => $track->Id_Track,
+                    'Name_Photo_Angle' => $angle->Name_Photo_Angle,
+                    'Icon_Photo_Angle' => $angle->Icon_Photo_Angle,
+                    'Path_Track_Photo' => $path,
+                ]);
+            }
+        }
+
+        return redirect()->route('user_report')->with('success', 'Tracking data uploaded successfully!');
+    }
+
+    public function validateRule(Request $request)
+    {
+        $request->validate([
+            'sequence_no' => 'required|string',
+            'area_name' => 'required|string',
+        ]);
+
+        $sequenceNo = $request->input('sequence_no');
+        $areaName = $request->input('area_name');
+
+        // --- LOGIKA MENGUBAH NAMA AREA MENJADI NAMA PROSES ASTRA ---
+        // Contoh: "Engine" -> "astra_engine", "Main Line Start" -> "astra_main_line_start"
+        // Kita ubah ke huruf kecil dan ganti spasi dengan underscore
+        $processName = 'astra_' . strtolower(str_replace(' ', '_', $areaName));
+
+        // --- LOGIKA VALIDASI URUTAN DARI DATABASE PODIUM ---
+        // --- PERUBAHAN: Format sequence_no ---
+        $sequenceNoFormatted = str_pad($sequenceNo, 5, '0', STR_PAD_LEFT);
+
+        try {
+            // 1. Cari plan di database PODIUM berdasarkan Sequence_No_Plan
+            $plan = DB::connection('podium')->table('plans')->where('Sequence_No_Plan', $sequenceNoFormatted)->first();
+            if (!$plan) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Plan dengan Sequence_No_Plan '{$sequenceNoFormatted}' tidak ditemukan di sistem PODIUM."
+                ], 404);
+            }
+
+            $modelName = $plan->Model_Name_Plan;
+
+            // 2. Cari rule di database PODIUM berdasarkan Type_Rule
+            $rule = DB::connection('podium')->table('rules')->where('Type_Rule', $modelName)->first();
+            if (!$rule) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Rule untuk model '{$modelName}' tidak ditemukan di sistem PODIUM."
+                ], 400);
+            }
+
+            // 3. Ambil Rule_Rule (ini berupa string JSON dari Query Builder)
+            $ruleSequenceRaw = $rule->Rule_Rule;
+
+            // Coba decode string JSON menjadi array
+            $ruleSequence = null;
+            if (is_string($ruleSequenceRaw)) {
+                $ruleSequence = json_decode($ruleSequenceRaw, true); // true untuk mengembalikan array asosiatif
+            }
+
+            // Pastikan $ruleSequence adalah array hasil decode JSON.
+            if (!is_array($ruleSequence)) {
+                // Jika decode gagal atau nilainya bukan string JSON valid, kembalikan error
+                return response()->json([
+                    'success' => false,
+                    'message' => "Format rule untuk model '{$modelName}' rusak atau tidak valid."
+                ], 400);
+            }
+
+            // 4. Cek apakah process_name (area yang sedang diproses) ada dalam rule
+            $position = null;
+            foreach ($ruleSequence as $key => $process) {
+                if ($process === $processName) {
+                    $position = (int)$key;
+                    break;
+                }
+            }
+
+            if ($position === null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Proses '{$processName}' (Area: {$areaName}) tidak termasuk dalam rule untuk model '{$modelName}'."
+                ], 400);
+            }
+
+            // 5. Ambil Record_Plan (ini berupa string JSON dari Query Builder)
+            $recordRaw = $plan->Record_Plan;
+
+            // Coba decode string JSON menjadi array
+            $record = [];
+            if (is_string($recordRaw) && !empty($recordRaw)) {
+                $decodedRecord = json_decode($recordRaw, true);
+                if (is_array($decodedRecord)) {
+                    $record = $decodedRecord;
+                } else {
+                    // Jika decode gagal atau nilainya bukan string JSON valid, kembalikan error
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Format Record_Plan untuk plan ini rusak."
+                    ], 500); // atau 400, tergantung kebijakan
+                }
+            } // Jika null atau kosong, biarkan $record sebagai array kosong
+
+            // 6. Cek apakah proses sebelumnya sudah dilakukan
+            $previousProcessesDone = true;
+            $missingPrevious = [];
+            for ($i = 1; $i < $position; $i++) {
+                $prevProcess = $ruleSequence[$i] ?? null;
+                if ($prevProcess && !isset($record[$prevProcess])) {
+                    $previousProcessesDone = false;
+                    $missingPrevious[] = $prevProcess;
+                }
+            }
+
+            if (!$previousProcessesDone) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Proses sebelumnya belum selesai: " . implode(', ', $missingPrevious)
+                ], 400);
+            }
+
+            // Jika semua validasi di atas lolos
+            return response()->json([
+                'success' => true,
+                'message' => "Semua proses sebelumnya sudah selesai. Siap melanjutkan proses {$areaName}."
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memvalidasi rule di sistem PODIUM: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }
