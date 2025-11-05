@@ -122,7 +122,7 @@ class TrackController extends Controller
         // Validasi input teks wajib
         $request->validate([
             'Id_User' => 'required',
-            'no' => 'required',
+            'no' => 'required', // sequence_no
             'type' => 'required',
             'production' => 'required',
             'Id_Type' => 'required',
@@ -130,8 +130,8 @@ class TrackController extends Controller
         ]);
 
         // Ambil sequence_no dan area_name dari request
-        $sequenceNo = $request->no; // Ini adalah 'no' dari form
-        $areaName = $request->Name_Area; // Ini adalah 'Name_Area' dari form
+        $sequenceNo = $request->input('no'); // Ini adalah 'no' dari form
+        $areaName = $request->input('Name_Area'); // Ini adalah 'Name_Area' dari form
 
         // --- LOGIKA UPDATE RECORD DI DATABASE PODIUM LANGSUNG (Setelah validasi atau sebelumnya) ---
         // --- PERUBAHAN: Format sequence_no ---
@@ -158,10 +158,14 @@ class TrackController extends Controller
 
             // 3. Ambil Rule_Rule (ini berupa string JSON dari Query Builder)
             $ruleSequenceRaw = $rule->Rule_Rule;
+
+            // Coba decode string JSON menjadi array
             $ruleSequence = null;
             if (is_string($ruleSequenceRaw)) {
-                $ruleSequence = json_decode($ruleSequenceRaw, true);
+                $ruleSequence = json_decode($ruleSequenceRaw, true); // true untuk mengembalikan array asosiatif
             }
+
+            // Pastikan $ruleSequence adalah array hasil decode JSON.
             if (!is_array($ruleSequence)) {
                 return redirect()->back()->withErrors(['general' => "Format rule untuk model '{$modelName}' rusak."]);
             }
@@ -181,6 +185,8 @@ class TrackController extends Controller
 
             // 5. Ambil Record_Plan (ini berupa string JSON dari Query Builder)
             $recordRaw = $plan->Record_Plan;
+
+            // Coba decode string JSON menjadi array
             $record = [];
             if (is_string($recordRaw) && !empty($recordRaw)) {
                 $decodedRecord = json_decode($recordRaw, true);
@@ -189,15 +195,54 @@ class TrackController extends Controller
                 } else {
                     return redirect()->back()->withErrors(['general' => "Format Record_Plan untuk plan ini rusak."]);
                 }
-            }
+            } // Jika null atau kosong, biarkan $record sebagai array kosong
+
+            // --- LOGIKA VALIDASI URUTAN DAPAT DITAMBAHKAN DI SINI JIKA DIPERLUKAN ---
+            // Misalnya, cek apakah proses sebelum $position sudah ada di $record
+            // for ($i = 1; $i < $position; $i++) {
+            //     $prevProcess = $ruleSequence[$i] ?? null;
+            //     if ($prevProcess && !isset($record[$prevProcess])) {
+            //         return redirect()->back()->withErrors(['general' => "Proses sebelumnya '$prevProcess' belum selesai."]);
+            //     }
+            // }
+            // -----------------------
 
             // 7. Update record: tambahkan proses dan timestamp
             $record[$processName] = $timestamp;
 
-            // 8. Simpan kembali ke database PODIUM
+            // --- LOGIKA TAMBAHAN: Cek apakah SEMUA proses dalam rule sudah selesai ---
+            $allProcessesCompleted = true;
+            // Kita iterasi semua proses yang *harus* ada berdasarkan rule
+            foreach ($ruleSequence as $requiredProcessName) {
+                if (!isset($record[$requiredProcessName])) {
+                    $allProcessesCompleted = false;
+                    // Kita tidak perlu mencari tahu yang mana saja, cukup tahu bahwa belum selesai
+                    break; // Cukup satu yang belum selesai untuk menggagalkan status 'done'
+                }
+            }
+
+            // 8. Siapkan data untuk update
+            $updateData = [
+                'Record_Plan' => json_encode($record, JSON_UNESCAPED_UNICODE)
+            ];
+
+            // Jika semua proses selesai, tambahkan status 'done'
+            if ($allProcessesCompleted) {
+                $updateData['Status_Plan'] = 'done';
+                // Log::info("Status_Plan diupdate menjadi 'done' untuk Id_Plan: {$plan->Id_Plan} (Sequence: {$sequenceNoFormatted}) karena semua proses selesai.");
+            }
+            // else {
+            //     // Opsional: Jika sebelumnya 'done' dan sekarang ada proses yang hilang (misalnya data dihapus), reset status
+            //     // Untuk kasusmu, biasanya status hanya berubah ke 'done', jadi bisa diabaikan.
+            //     // $updateData['Status_Plan'] = 'pending'; // atau status lain sesuai kebijakan
+            // }
+
+            // 9. Simpan kembali ke database PODIUM (Record_Plan dan Status_Plan jika perlu)
             DB::connection('podium')->table('plans')
-                ->where('Id_Plan', $plan->Id_Plan)
-                ->update(['Record_Plan' => json_encode($record, JSON_UNESCAPED_UNICODE)]);
+                ->where('Id_Plan', $plan->Id_Plan) // Gunakan Id_Plan untuk keamanan
+                ->update($updateData);
+
+            \Log::info("Berhasil mencatat proses {$processName} ke Record_Plan di database PODIUM untuk Sequence_No_Plan: {$sequenceNoFormatted}. Status Plan: " . ($allProcessesCompleted ? 'done' : 'pending'));
 
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['general' => 'Gagal mencatat ke sistem PODIUM: ' . $e->getMessage()]);
