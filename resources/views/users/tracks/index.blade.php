@@ -63,6 +63,13 @@
                                     Scan
                                 </button>
                             </div>
+                            
+                            <!-- Tambahkan div untuk notifikasi validasi rule -->
+                            <div id="validation-error-message" class="alert alert-danger alert-dismissible fade show mb-3" role="alert" style="display: none;">
+                                <strong id="validation-error-text"></strong>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+
                             <div class="col-lg-8">
                                 <p class="text-sm">Tractor Type:</p>
                                 <input type="hidden" name="Id_Type" id="Id_Type" value="" readonly>
@@ -109,12 +116,6 @@
                             </div>
                         </div>
                         <br>
-
-                        <!-- Tambahkan div untuk notifikasi validasi rule -->
-                        <div id="validation-error-message" class="alert alert-danger alert-dismissible fade show mb-3" role="alert" style="display: none;">
-                            <strong id="validation-error-text"></strong>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
 
                         <div class="mb-2 ps-3">
                             <h6 class="text-primary mb-1">Upload Photos:</h6>
