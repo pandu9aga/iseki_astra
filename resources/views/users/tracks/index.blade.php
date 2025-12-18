@@ -127,7 +127,13 @@
                                     <label class="form-label text-primary d-block">{{ $part->photo_angle->Name_Photo_Angle }} <span class="material-symbols-rounded">{{ $part->photo_angle->Icon_Photo_Angle }}</span></label>
                                     <div class="input-group input-group-outline my-3 is-filled @error($part) is-invalid @enderror">
                                         <label class="form-label">{{ $part->photo_angle->Name_Photo_Angle }}</label>
-                                        <input type="file" class="form-control image-input" name="{{ $part->photo_angle->Id_Photo_Angle }}" data-preview="#preview-{{ $part->photo_angle->Id_Photo_Angle }}" accept="image/*" capture="environment" id="photoInput_{{ $part->photo_angle->Id_Photo_Angle }}">
+                                        {{-- <input type="file" class="form-control image-input" name="{{ $part->photo_angle->Id_Photo_Angle }}" data-preview="#preview-{{ $part->photo_angle->Id_Photo_Angle }}" accept="image/*" capture="environment" id="photoInput_{{ $part->photo_angle->Id_Photo_Angle }}"> --}}
+                                        <input type="file" class="form-control image-input" name="{{ $part->photo_angle->Id_Photo_Angle }}"
+                                            data-preview="#preview-{{ $part->photo_angle->Id_Photo_Angle }}" accept="image/*"
+                                            @if($user->area->Name_Area !== 'Mower Collector')
+                                                capture="environment"
+                                            @endif
+                                            id="photoInput_{{ $part->photo_angle->Id_Photo_Angle }}">
                                     </div>
                                     <div class="invalid-feedback">You must upload this photo.</div>
                                     @error($part)
