@@ -123,6 +123,7 @@ class TrackController extends Controller
         $request->validate([
             'Id_User' => 'required',
             'no' => 'required', // sequence_no
+            'dateProd' => 'required', // date production
             'type' => 'required',
             'production' => 'required',
             'Id_Type' => 'required',
@@ -131,6 +132,7 @@ class TrackController extends Controller
 
         // Ambil sequence_no dan area_name dari request
         $sequenceNo = $request->input('no'); // Ini adalah 'no' dari form
+        $dateProduction = $request->input('dateProd'); // Ini adalah 'dateProd' dari form
         $areaName = $request->input('Name_Area'); // Ini adalah 'Name_Area' dari form
 
         // --- LOGIKA UPDATE RECORD DI DATABASE PODIUM LANGSUNG (Setelah validasi atau sebelumnya) ---
@@ -143,7 +145,11 @@ class TrackController extends Controller
 
         try {
             // 1. Cari plan di database PODIUM berdasarkan Sequence_No_Plan
-            $plan = DB::connection('podium')->table('plans')->where('Sequence_No_Plan', $sequenceNoFormatted)->first();
+            $plan = DB::connection('podium')
+                        ->table('plans')
+                        ->where('Sequence_No_Plan', $sequenceNoFormatted)
+                        ->where('Production_Date_Plan', $dateProduction)
+                        ->first();
             if (!$plan) {
                 return redirect()->back()->withErrors(['general' => "Plan dengan Sequence_No_Plan '{$sequenceNoFormatted}' tidak ditemukan di sistem PODIUM."]);
             }
@@ -315,10 +321,12 @@ class TrackController extends Controller
     {
         $request->validate([
             'sequence_no' => 'required|string',
+            'date_production' => 'required|string',
             'area_name' => 'required|string',
         ]);
 
         $sequenceNo = $request->input('sequence_no');
+        $dateProduction = $request->input('date_production');
         $areaName = $request->input('area_name');
 
         // --- LOGIKA MENGUBAH NAMA AREA MENJADI NAMA PROSES ASTRA ---
@@ -332,7 +340,11 @@ class TrackController extends Controller
 
         try {
             // 1. Cari plan di database PODIUM berdasarkan Sequence_No_Plan
-            $plan = DB::connection('podium')->table('plans')->where('Sequence_No_Plan', $sequenceNoFormatted)->first();
+            $plan = DB::connection('podium')
+                        ->table('plans')
+                        ->where('Sequence_No_Plan', $sequenceNoFormatted)
+                        ->where('Production_Date_Plan', $dateProduction)
+                        ->first();
             if (!$plan) {
                 return response()->json([
                     'success' => false,

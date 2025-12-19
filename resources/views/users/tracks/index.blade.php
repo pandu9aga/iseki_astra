@@ -73,12 +73,25 @@
                             <div class="col-lg-8">
                                 <p class="text-sm">Tractor Type:</p>
                                 <input type="hidden" name="Id_Type" id="Id_Type" value="" readonly>
-                                <div class="input-group input-group-outline my-3 is-filled">
-                                    <label for="no" class="form-label">No</label>
-                                    <input type="text" class="form-control @error('no') is-invalid @enderror" name="no" id="no" value="" readonly>
-                                    @error('no')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
+                                <div class="row my-3">
+                                    <div class="col-6">
+                                        <div class="input-group input-group-outline is-filled">
+                                            <label for="no" class="form-label">No</label>
+                                            <input type="text" class="form-control @error('no') is-invalid @enderror" name="no" id="no" value="" readonly>
+                                            @error('no')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="input-group input-group-outline is-filled">
+                                            <label for="dateProd" class="form-label">Date</label>
+                                            <input type="text" class="form-control @error('dateProd') is-invalid @enderror" name="dateProd" id="dateProd" value="" readonly>
+                                            @error('dateProd')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="input-group input-group-outline my-3 is-filled">
                                     <label for="type" class="form-label">Type Tractor</label>
@@ -243,7 +256,9 @@
         if (splitText.length >= 4) {
             document.getElementById("Id_Type").value = decodedText;
             const sequenceNo = splitText[0]; // Ambil sequence number
+            const dateProd = splitText[1]; // Ambil date production
             document.getElementById("no").value = sequenceNo; // Set no
+            document.getElementById("dateProd").value = dateProd;
             document.getElementById("type").value = splitText[2];
             document.getElementById("production").value = splitText[3];
 
@@ -253,7 +268,7 @@
 
             // Pastikan areaName tidak kosong sebelum memanggil validasi
             if (areaName) {
-                validateRuleOnServer(sequenceNo, areaName);
+                validateRuleOnServer(sequenceNo, dateProd, areaName);
             } else {
                 console.error("Nama Area tidak ditemukan.");
                 document.getElementById('validation-error-text').textContent = 'Gagal memvalidasi: Nama Area tidak valid.';
@@ -268,7 +283,7 @@
     }
 
     // Fungsi untuk validasi rule ke server Astra
-    async function validateRuleOnServer(sequenceNo, areaName) {
+    async function validateRuleOnServer(sequenceNo, dateProd, areaName) {
         // Sembunyikan notifikasi error sebelumnya
         document.getElementById('validation-error-message').style.display = 'none';
 
@@ -284,6 +299,7 @@
                 },
                 body: JSON.stringify({
                     sequence_no: sequenceNo,
+                    date_production: dateProd,
                     area_name: areaName
                 })
             });
