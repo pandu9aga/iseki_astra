@@ -404,20 +404,6 @@ document.querySelectorAll('.image-input').forEach(input => {
             document.querySelector(previewId).src = e.target.result;
         };
         reader.readAsDataURL(file);
-
-        // 🔽 Kompres gambar sebelum submit
-        let compressedFile;
-        let quality = 0.9;
-
-        do {
-            compressedFile = await compressImage(file, quality);
-            quality -= 0.1;
-        } while (compressedFile.size > 500 * 1024 && quality > 0.1);
-
-        // Ganti file input dengan file hasil kompresi
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(compressedFile);
-        this.files = dataTransfer.files;
     });
 });
 
@@ -459,6 +445,78 @@ function compressImage(file, quality = 0.7, maxWidth = 1024) {
         reader.readAsDataURL(file);
     });
 }
+
+// document.querySelectorAll('.image-input').forEach(input => {
+//     input.addEventListener('click', function() {
+//         const previewId = this.dataset.preview;
+//         document.querySelector(previewId).src = ''; // Hapus gambar preview
+//     });
+    
+//     input.addEventListener('change', async function(e) {
+//         const file = this.files[0];
+//         if (!file) return;
+
+//         const previewId = this.dataset.preview;
+//         const reader = new FileReader();
+//         reader.onload = function (e) {
+//             document.querySelector(previewId).src = e.target.result;
+//         };
+//         reader.readAsDataURL(file);
+
+//         // 🔽 Kompres gambar sebelum submit
+//         let compressedFile;
+//         let quality = 0.9;
+
+//         do {
+//             compressedFile = await compressImage(file, quality);
+//             quality -= 0.1;
+//         } while (compressedFile.size > 500 * 1024 && quality > 0.1);
+
+//         // Ganti file input dengan file hasil kompresi
+//         const dataTransfer = new DataTransfer();
+//         dataTransfer.items.add(compressedFile);
+//         this.files = dataTransfer.files;
+//     });
+// });
+
+// // 🎯 Fungsi kompresi pakai canvas
+// function compressImage(file, quality = 0.7, maxWidth = 1024) {
+//     return new Promise(resolve => {
+//         const img = new Image();
+//         const canvas = document.createElement('canvas');
+//         const reader = new FileReader();
+
+//         reader.onload = e => {
+//             img.src = e.target.result;
+//         };
+
+//         img.onload = () => {
+//             let width = img.width;
+//             let height = img.height;
+
+//             if (width > maxWidth) {
+//                 height = height * (maxWidth / width);
+//                 width = maxWidth;
+//             }
+
+//             canvas.width = width;
+//             canvas.height = height;
+
+//             const ctx = canvas.getContext("2d");
+//             ctx.drawImage(img, 0, 0, width, height);
+
+//             canvas.toBlob(blob => {
+//                 const compressedFile = new File([blob], file.name, {
+//                     type: 'image/jpeg',
+//                     lastModified: Date.now()
+//                 });
+//                 resolve(compressedFile);
+//             }, 'image/jpeg', quality);
+//         };
+
+//         reader.readAsDataURL(file);
+//     });
+// }
 
 // 🔍 Modal preview tetap
 document.querySelectorAll('.gallery-img').forEach(img => {
