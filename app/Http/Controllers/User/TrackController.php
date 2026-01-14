@@ -103,7 +103,9 @@ class TrackController extends Controller
             $fieldName = (string) $angle->Id_Photo_Angle;
 
             if ($request->hasFile($fieldName)) {
-                $path = $request->file($fieldName)->store("track", 'uploads');
+                // $path = $request->file($fieldName)->store("track", 'uploads');
+                $folderName = 'track_' . now()->format('m_Y'); // contoh: track_01_2026
+                $path = $request->file($fieldName)->store($folderName, 'uploads');
 
                 Track_Photo::create([
                     'Id_Track' => $track->Id_Track,
@@ -303,7 +305,9 @@ class TrackController extends Controller
             $fieldName = (string) $angle->Id_Photo_Angle;
 
             if ($request->hasFile($fieldName)) {
-                $path = $request->file($fieldName)->store("track", 'uploads');
+                // $path = $request->file($fieldName)->store("track", 'uploads');
+                $folderName = 'track_' . now()->format('m_Y'); // contoh: track_01_2026
+                $path = $request->file($fieldName)->store($folderName, 'uploads');
 
                 Track_Photo::create([
                     'Id_Track' => $track->Id_Track,
