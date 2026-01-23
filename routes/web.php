@@ -23,6 +23,9 @@ Route::get('/login', [MainController::class, 'index'])->name('login');
 Route::post('/login/auth', [MainController::class, 'login'])->name('login.auth');
 Route::get('/logout', [MainController::class, 'logout'])->name('logout');
 
+use App\Http\Controllers\PrintController;
+Route::get('/print-test', [PrintController::class, 'printTest']);
+
 Route::middleware(AdminMiddleware::class)->group(function () {
     Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
 
