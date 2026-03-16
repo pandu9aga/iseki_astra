@@ -143,7 +143,7 @@
                                         {{-- <input type="file" class="form-control image-input" name="{{ $part->photo_angle->Id_Photo_Angle }}" data-preview="#preview-{{ $part->photo_angle->Id_Photo_Angle }}" accept="image/*" capture="environment" id="photoInput_{{ $part->photo_angle->Id_Photo_Angle }}"> --}}
                                         <input type="file" class="form-control image-input" name="{{ $part->photo_angle->Id_Photo_Angle }}"
                                             data-preview="#preview-{{ $part->photo_angle->Id_Photo_Angle }}" accept="image/*"
-                                            @if($user->area->Name_Area !== 'Mower Collector')
+                                            @if($user->area->Name_Area !== 'Mower Collector End')
                                                 capture="environment"
                                             @endif
                                             id="photoInput_{{ $part->photo_angle->Id_Photo_Angle }}">

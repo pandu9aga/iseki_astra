@@ -3,19 +3,20 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\Area;
+use App\Models\Area_Photo;
+use App\Models\Track;
+use App\Models\Track_Photo;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Models\User;
-use App\Models\Area;
-use App\Models\Track;
-use App\Models\Area_Photo;
-use App\Models\Track_Photo;
-use Carbon\Carbon;
 
 class TrackController extends Controller
 {
-    public function index(){
+    public function index()
+    {
         $page = 'track';
 
         $Id_User = session('Id_User');
@@ -29,7 +30,8 @@ class TrackController extends Controller
         return view('users.tracks.index', compact('page', 'user', 'parts'));
     }
 
-    public function index2(){
+    public function index2()
+    {
         $page = 'track2';
 
         $Id_User = session('Id_User');
@@ -57,7 +59,7 @@ class TrackController extends Controller
 
         // Cari area berdasarkan nama
         $area = Area::where('Name_Area', $request->Name_Area)->first();
-        if (!$area) {
+        if (! $area) {
             return redirect()->back()->withErrors(['Name_Area' => 'Area not found.']);
         }
 
@@ -81,7 +83,7 @@ class TrackController extends Controller
             ->where('Id_Area', $area->Id_Area)
             ->whereBetween('Time_Track', [
                 Carbon::now()->subSeconds(10),
-                Carbon::now()->addSeconds(10)
+                Carbon::now()->addSeconds(10),
             ])
             ->exists();
         if ($exists) {
@@ -104,7 +106,7 @@ class TrackController extends Controller
 
             if ($request->hasFile($fieldName)) {
                 // $path = $request->file($fieldName)->store("track", 'uploads');
-                $folderName = 'track_' . now()->format('m_Y'); // contoh: track_01_2026
+                $folderName = 'track_'.now()->format('m_Y'); // contoh: track_01_2026
                 $path = $request->file($fieldName)->store($folderName, 'uploads');
 
                 Track_Photo::create([
@@ -143,16 +145,16 @@ class TrackController extends Controller
         $timestamp = Carbon::now()->format('Y-m-d H:i:s');
 
         // Ubah area_name menjadi process_name
-        $processName = 'astra_' . strtolower(str_replace(' ', '_', $areaName));
+        $processName = 'astra_'.strtolower(str_replace(' ', '_', $areaName));
 
         try {
             // 1. Cari plan di database PODIUM berdasarkan Sequence_No_Plan
             $plan = DB::connection('podium')
-                        ->table('plans')
-                        ->where('Sequence_No_Plan', $sequenceNoFormatted)
-                        ->where('Production_Date_Plan', $dateProduction)
-                        ->first();
-            if (!$plan) {
+                ->table('plans')
+                ->where('Sequence_No_Plan', $sequenceNoFormatted)
+                ->where('Production_Date_Plan', $dateProduction)
+                ->first();
+            if (! $plan) {
                 return redirect()->back()->withErrors(['general' => "Plan dengan Sequence_No_Plan '{$sequenceNoFormatted}' tidak ditemukan di sistem PODIUM."]);
             }
 
@@ -160,7 +162,7 @@ class TrackController extends Controller
 
             // 2. Cari rule di database PODIUM berdasarkan Type_Rule
             $rule = DB::connection('podium')->table('rules')->where('Type_Rule', $modelName)->first();
-            if (!$rule) {
+            if (! $rule) {
                 return redirect()->back()->withErrors(['general' => "Rule untuk model '{$modelName}' tidak ditemukan di sistem PODIUM."]);
             }
 
@@ -174,7 +176,7 @@ class TrackController extends Controller
             }
 
             // Pastikan $ruleSequence adalah array hasil decode JSON.
-            if (!is_array($ruleSequence)) {
+            if (! is_array($ruleSequence)) {
                 return redirect()->back()->withErrors(['general' => "Format rule untuk model '{$modelName}' rusak."]);
             }
 
@@ -182,7 +184,7 @@ class TrackController extends Controller
             $position = null;
             foreach ($ruleSequence as $key => $process) {
                 if ($process === $processName) {
-                    $position = (int)$key;
+                    $position = (int) $key;
                     break;
                 }
             }
@@ -196,12 +198,12 @@ class TrackController extends Controller
 
             // Coba decode string JSON menjadi array
             $record = [];
-            if (is_string($recordRaw) && !empty($recordRaw)) {
+            if (is_string($recordRaw) && ! empty($recordRaw)) {
                 $decodedRecord = json_decode($recordRaw, true);
                 if (is_array($decodedRecord)) {
                     $record = $decodedRecord;
                 } else {
-                    return redirect()->back()->withErrors(['general' => "Format Record_Plan untuk plan ini rusak."]);
+                    return redirect()->back()->withErrors(['general' => 'Format Record_Plan untuk plan ini rusak.']);
                 }
             } // Jika null atau kosong, biarkan $record sebagai array kosong
 
@@ -222,7 +224,7 @@ class TrackController extends Controller
             $allProcessesCompleted = true;
             // Kita iterasi semua proses yang *harus* ada berdasarkan rule
             foreach ($ruleSequence as $requiredProcessName) {
-                if (!isset($record[$requiredProcessName])) {
+                if (! isset($record[$requiredProcessName])) {
                     $allProcessesCompleted = false;
                     // Kita tidak perlu mencari tahu yang mana saja, cukup tahu bahwa belum selesai
                     break; // Cukup satu yang belum selesai untuk menggagalkan status 'done'
@@ -231,7 +233,7 @@ class TrackController extends Controller
 
             // 8. Siapkan data untuk update
             $updateData = [
-                'Record_Plan' => json_encode($record, JSON_UNESCAPED_UNICODE)
+                'Record_Plan' => json_encode($record, JSON_UNESCAPED_UNICODE),
             ];
 
             // Jika semua proses selesai, tambahkan status 'done'
@@ -250,16 +252,16 @@ class TrackController extends Controller
                 ->where('Id_Plan', $plan->Id_Plan) // Gunakan Id_Plan untuk keamanan
                 ->update($updateData);
 
-            \Log::info("Berhasil mencatat proses {$processName} ke Record_Plan di database PODIUM untuk Sequence_No_Plan: {$sequenceNoFormatted}. Status Plan: " . ($allProcessesCompleted ? 'done' : 'pending'));
+            \Log::info("Berhasil mencatat proses {$processName} ke Record_Plan di database PODIUM untuk Sequence_No_Plan: {$sequenceNoFormatted}. Status Plan: ".($allProcessesCompleted ? 'done' : 'pending'));
 
         } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['general' => 'Gagal mencatat ke sistem PODIUM: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['general' => 'Gagal mencatat ke sistem PODIUM: '.$e->getMessage()]);
         }
 
         // --- LANJUTKAN LOGIKA LAMA SIMPAN KE DATABASE ASTRA ---
         // Cari area berdasarkan nama
         $area = Area::where('Name_Area', $areaName)->first(); // Gunakan $areaName dari request
-        if (!$area) {
+        if (! $area) {
             return redirect()->back()->withErrors(['Name_Area' => 'Area not found.']);
         }
 
@@ -283,7 +285,7 @@ class TrackController extends Controller
             ->where('Id_Area', $area->Id_Area)
             ->whereBetween('Time_Track', [
                 Carbon::now()->subSeconds(10),
-                Carbon::now()->addSeconds(10)
+                Carbon::now()->addSeconds(10),
             ])
             ->exists();
         if ($exists) {
@@ -306,7 +308,7 @@ class TrackController extends Controller
 
             if ($request->hasFile($fieldName)) {
                 // $path = $request->file($fieldName)->store("track", 'uploads');
-                $folderName = 'track_' . now()->format('m_Y'); // contoh: track_01_2026
+                $folderName = 'track_'.now()->format('m_Y'); // contoh: track_01_2026
                 $path = $request->file($fieldName)->store($folderName, 'uploads');
 
                 Track_Photo::create([
@@ -336,7 +338,7 @@ class TrackController extends Controller
         // --- LOGIKA MENGUBAH NAMA AREA MENJADI NAMA PROSES ASTRA ---
         // Contoh: "Engine" -> "astra_engine", "Main Line Start" -> "astra_main_line_start"
         // Kita ubah ke huruf kecil dan ganti spasi dengan underscore
-        $processName = 'astra_' . strtolower(str_replace(' ', '_', $areaName));
+        $processName = 'astra_'.strtolower(str_replace(' ', '_', $areaName));
 
         // --- LOGIKA VALIDASI URUTAN DARI DATABASE PODIUM ---
         // --- PERUBAHAN: Format sequence_no ---
@@ -345,14 +347,14 @@ class TrackController extends Controller
         try {
             // 1. Cari plan di database PODIUM berdasarkan Sequence_No_Plan
             $plan = DB::connection('podium')
-                        ->table('plans')
-                        ->where('Sequence_No_Plan', $sequenceNoFormatted)
-                        ->where('Production_Date_Plan', $dateProduction)
-                        ->first();
-            if (!$plan) {
+                ->table('plans')
+                ->where('Sequence_No_Plan', $sequenceNoFormatted)
+                ->where('Production_Date_Plan', $dateProduction)
+                ->first();
+            if (! $plan) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Plan dengan Sequence_No_Plan '{$sequenceNoFormatted}' tidak ditemukan di sistem PODIUM."
+                    'message' => "Plan dengan Sequence_No_Plan '{$sequenceNoFormatted}' tidak ditemukan di sistem PODIUM.",
                 ], 404);
             }
 
@@ -360,10 +362,10 @@ class TrackController extends Controller
 
             // 2. Cari rule di database PODIUM berdasarkan Type_Rule
             $rule = DB::connection('podium')->table('rules')->where('Type_Rule', $modelName)->first();
-            if (!$rule) {
+            if (! $rule) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Rule untuk model '{$modelName}' tidak ditemukan di sistem PODIUM."
+                    'message' => "Rule untuk model '{$modelName}' tidak ditemukan di sistem PODIUM.",
                 ], 400);
             }
 
@@ -377,11 +379,11 @@ class TrackController extends Controller
             }
 
             // Pastikan $ruleSequence adalah array hasil decode JSON.
-            if (!is_array($ruleSequence)) {
+            if (! is_array($ruleSequence)) {
                 // Jika decode gagal atau nilainya bukan string JSON valid, kembalikan error
                 return response()->json([
                     'success' => false,
-                    'message' => "Format rule untuk model '{$modelName}' rusak atau tidak valid."
+                    'message' => "Format rule untuk model '{$modelName}' rusak atau tidak valid.",
                 ], 400);
             }
 
@@ -389,7 +391,7 @@ class TrackController extends Controller
             $position = null;
             foreach ($ruleSequence as $key => $process) {
                 if ($process === $processName) {
-                    $position = (int)$key;
+                    $position = (int) $key;
                     break;
                 }
             }
@@ -397,7 +399,7 @@ class TrackController extends Controller
             if ($position === null) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Proses '{$processName}' (Area: {$areaName}) tidak termasuk dalam rule untuk model '{$modelName}'."
+                    'message' => "Proses '{$processName}' (Area: {$areaName}) tidak termasuk dalam rule untuk model '{$modelName}'.",
                 ], 400);
             }
 
@@ -406,7 +408,7 @@ class TrackController extends Controller
 
             // Coba decode string JSON menjadi array
             $record = [];
-            if (is_string($recordRaw) && !empty($recordRaw)) {
+            if (is_string($recordRaw) && ! empty($recordRaw)) {
                 $decodedRecord = json_decode($recordRaw, true);
                 if (is_array($decodedRecord)) {
                     $record = $decodedRecord;
@@ -414,7 +416,7 @@ class TrackController extends Controller
                     // Jika decode gagal atau nilainya bukan string JSON valid, kembalikan error
                     return response()->json([
                         'success' => false,
-                        'message' => "Format Record_Plan untuk plan ini rusak."
+                        'message' => 'Format Record_Plan untuk plan ini rusak.',
                     ], 500); // atau 400, tergantung kebijakan
                 }
             } // Jika null atau kosong, biarkan $record sebagai array kosong
@@ -424,29 +426,33 @@ class TrackController extends Controller
             $missingPrevious = [];
             for ($i = 1; $i < $position; $i++) {
                 $prevProcess = $ruleSequence[$i] ?? null;
-                if ($prevProcess && !isset($record[$prevProcess])) {
+                if ($prevProcess && ! isset($record[$prevProcess])) {
                     $previousProcessesDone = false;
                     $missingPrevious[] = $prevProcess;
                 }
             }
 
-            if (!$previousProcessesDone) {
+            if ($areaName == 'Mower Collector') {
+                $previousProcessesDone = true;
+            }
+
+            if (! $previousProcessesDone) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Proses sebelumnya belum selesai: " . implode(', ', $missingPrevious)
+                    'message' => 'Proses sebelumnya belum selesai: '.implode(', ', $missingPrevious),
                 ], 400);
             }
 
             // Jika semua validasi di atas lolos
             return response()->json([
                 'success' => true,
-                'message' => "Semua proses sebelumnya sudah selesai. Siap melanjutkan proses {$areaName}."
+                'message' => "Semua proses sebelumnya sudah selesai. Siap melanjutkan proses {$areaName}.",
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal memvalidasi rule di sistem PODIUM: ' . $e->getMessage()
+                'message' => 'Gagal memvalidasi rule di sistem PODIUM: '.$e->getMessage(),
             ], 500);
         }
     }
