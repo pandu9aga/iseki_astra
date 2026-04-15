@@ -37,6 +37,10 @@
   
   @yield('style')
 
+
+    <!-- Dynamic Favicon -->
+    <script src="/iseki_pro_app/js/dynamic-favicon.js"></script>
+    <script>document.addEventListener("DOMContentLoaded", function() { setDynamicFavicon("view_in_ar", "Astra"); });</script>
 </head>
 
 <body class="g-sidenav-show  bg-gray-100">
