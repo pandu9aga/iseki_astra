@@ -45,23 +45,27 @@
                 <div class="card-body px-0 pb-2">
                     <div class="table-responsive p-0">
                         <div class="mx-3 my-3">
-                            <div class="container-fluid">
-                                <div class="row">
-                                    <div class="col-6 col-sm-4">
-                                        <div class="input-group input-group-outline">
-                                            <input type="date" name="Time_Track" id="Time_Track" class="form-control" value="{{ $date }}">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                                <div class="d-flex flex-wrap align-items-center gap-2">
+                                    <div class="d-flex align-items-center gap-2 flex-grow-1" style="max-width: 300px;">
+                                        <button type="button" class="btn btn-outline-primary btn-sm mb-0 px-2" id="prevDateBtn">
+                                            <span class="material-symbols-rounded">chevron_left</span>
+                                        </button>
+                                        <div class="input-group input-group-outline mb-0 flex-grow-1">
+                                            <input type="date" name="Time_Track" id="Time_Track" class="form-control text-center px-2" value="{{ $date }}">
                                         </div>
-                                    </div>
-                                    <div class="col-2">
-                                        <button id="filterBtn" class="btn btn-primary btn-sm">
-                                            <span class="material-symbols-rounded">filter_alt</span>
+                                        <button type="button" class="btn btn-outline-primary btn-sm mb-0 px-2" id="nextDateBtn">
+                                            <span class="material-symbols-rounded">chevron_right</span>
                                         </button>
                                     </div>
-                                    <div class="col-4 col-sm-6 text-end">
-                                        <a href="{{ route('report.index.all') }}" class="btn btn-info btn-sm">
-                                            <span class="material-symbols-rounded">list_alt</span> View All Reports
-                                        </a>
-                                    </div>
+                                    <button id="filterBtn" class="btn btn-primary btn-sm mb-0 px-3">
+                                        <span class="material-symbols-rounded">filter_alt</span>
+                                    </button>
+                                </div>
+                                <div class="text-end">
+                                    <a href="{{ route('report.index.all') }}" class="btn btn-info btn-sm mb-0">
+                                        <span class="material-symbols-rounded">list_alt</span> View All Reports
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -163,6 +167,32 @@
         // Filter button click event
         $('#filterBtn').on('click', function() {
             table.ajax.reload();
+        });
+
+        $('#prevDateBtn').on('click', function() {
+            let dateInput = document.getElementById('Time_Track');
+            if(dateInput.value) {
+                let currentDate = new Date(dateInput.value);
+                currentDate.setDate(currentDate.getDate() - 1);
+                let year = currentDate.getFullYear();
+                let month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                let day = String(currentDate.getDate()).padStart(2, '0');
+                dateInput.value = `${year}-${month}-${day}`;
+                table.ajax.reload();
+            }
+        });
+
+        $('#nextDateBtn').on('click', function() {
+            let dateInput = document.getElementById('Time_Track');
+            if(dateInput.value) {
+                let currentDate = new Date(dateInput.value);
+                currentDate.setDate(currentDate.getDate() + 1);
+                let year = currentDate.getFullYear();
+                let month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                let day = String(currentDate.getDate()).padStart(2, '0');
+                dateInput.value = `${year}-${month}-${day}`;
+                table.ajax.reload();
+            }
         });
 
         // Enter key on date input
