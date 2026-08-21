@@ -140,7 +140,7 @@
                         </div>
                         <div class="row justify-content-center mt-4 mb-3">
                             <div class="col-lg-6">
-                                <button type="submit" class="btn btn-primary w-100">Submit</button>
+                                <button type="submit" class="btn btn-primary w-100" id="submitBtn">Submit</button>
                                 {{-- <button type="submit" class="btn btn-primary" onclick="this.disabled=true; this.form.submit();">Submit</button> --}}
                             </div>
                         </div>
@@ -373,7 +373,14 @@ document.querySelectorAll('.gallery-img').forEach(img => {
 </script>
 
 <script>
+// Cegah double submit: tombol dinonaktifkan + flag saat data sedang dikirim
 document.querySelector('form').addEventListener('submit', function(e) {
+    // Jika sudah ada submit yang sedang berjalan, tolak submit kedua
+    if (window.__trackSubmitting) {
+        e.preventDefault();
+        return;
+    }
+
     let isValid = true;
 
     // Validasi input teks: no, type, production, Id_Type
@@ -407,6 +414,23 @@ document.querySelector('form').addEventListener('submit', function(e) {
     if (!isValid) {
         e.preventDefault(); // batalkan submit
         alert('Fill all the form first!');
+        return;
+    }
+
+    // Kunci form: cegah klik ganda / enter ganda saat sedang mengirim
+    window.__trackSubmitting = true;
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Mengirim...';
+    submitBtn.classList.add('disabled');
+});
+
+// Peringatan bila reload/close terjadi saat submit masih berjalan
+window.addEventListener('beforeunload', function (e) {
+    if (window.__trackSubmitting) {
+        e.preventDefault();
+        e.returnValue = 'Data sedang dikirim. Yakin ingin reload/keluar halaman?';
+        return e.returnValue;
     }
 });
 </script>

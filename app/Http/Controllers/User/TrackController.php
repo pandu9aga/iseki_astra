@@ -79,45 +79,51 @@ class TrackController extends Controller
         $parts = explode(';', $request->Id_Type);
         $filteredIdType = implode(';', array_slice($parts, 0, 4));
 
-        // Jika ada Id_Type (number) dan area yang sama, ganti data lama (tidak membuat duplikat)
-        $existingTracks = Track::with('track_photo')
-            ->where('Id_Type', $filteredIdType)
-            ->where('Id_Area', $area->Id_Area)
-            ->orderBy('Id_Track')
-            ->get();
+        // Jika ada Id_Type (number) dan area yang sama, ganti data lama (tidak membuat duplikat).
+        // Transaksi + lock agar dua submit paralel tidak membuat data ganda.
+        $track = DB::transaction(function () use ($request, $filteredIdType, $area) {
+            $existingTracks = Track::with('track_photo')
+                ->where('Id_Type', $filteredIdType)
+                ->where('Id_Area', $area->Id_Area)
+                ->orderBy('Id_Track')
+                ->lockForUpdate()
+                ->get();
 
-        // Hapus semua foto lama dari direktori dan database
-        foreach ($existingTracks as $existing) {
-            foreach ($existing->track_photo as $photo) {
-                if (Storage::disk('uploads')->exists($photo->Path_Track_Photo)) {
-                    Storage::disk('uploads')->delete($photo->Path_Track_Photo);
+            // Hapus semua foto lama dari direktori dan database
+            foreach ($existingTracks as $existing) {
+                foreach ($existing->track_photo as $photo) {
+                    if (Storage::disk('uploads')->exists($photo->Path_Track_Photo)) {
+                        Storage::disk('uploads')->delete($photo->Path_Track_Photo);
+                    }
+                    $photo->delete();
                 }
-                $photo->delete();
             }
-        }
 
-        // Simpan data track (update data lama jika sudah ada, buat baru jika belum)
-        $track = $existingTracks->first();
-        if ($track) {
-            $track->update([
-                'Id_User' => $request->Id_User,
-                'Time_Track' => Carbon::now(),
-                'Status_Track' => 0,
-            ]);
+            // Simpan data track (update data lama jika sudah ada, buat baru jika belum)
+            $track = $existingTracks->first();
+            if ($track) {
+                $track->update([
+                    'Id_User' => $request->Id_User,
+                    'Time_Track' => Carbon::now(),
+                    'Status_Track' => 0,
+                ]);
 
-            // Hapus track duplikat yang tersisa (jika ada)
-            foreach ($existingTracks->slice(1) as $duplicate) {
-                $duplicate->delete();
+                // Hapus track duplikat yang tersisa (jika ada)
+                foreach ($existingTracks->slice(1) as $duplicate) {
+                    $duplicate->delete();
+                }
+
+                return $track;
             }
-        } else {
-            $track = Track::create([
+
+            return Track::create([
                 'Id_User' => $request->Id_User,
                 'Id_Type' => $filteredIdType,
                 'Id_Area' => $area->Id_Area,
                 'Time_Track' => Carbon::now(),
                 'Status_Track' => 0,
             ]);
-        }
+        });
 
         // Simpan semua file foto ke track_photos
         foreach ($areaPhotos as $photo) {
@@ -300,45 +306,51 @@ class TrackController extends Controller
         $parts = explode(';', $request->Id_Type);
         $filteredIdType = implode(';', array_slice($parts, 0, 4));
 
-        // Jika ada Id_Type (number) dan area yang sama, ganti data lama (tidak membuat duplikat)
-        $existingTracks = Track::with('track_photo')
-            ->where('Id_Type', $filteredIdType)
-            ->where('Id_Area', $area->Id_Area)
-            ->orderBy('Id_Track')
-            ->get();
+        // Jika ada Id_Type (number) dan area yang sama, ganti data lama (tidak membuat duplikat).
+        // Transaksi + lock agar dua submit paralel tidak membuat data ganda.
+        $track = DB::transaction(function () use ($request, $filteredIdType, $area) {
+            $existingTracks = Track::with('track_photo')
+                ->where('Id_Type', $filteredIdType)
+                ->where('Id_Area', $area->Id_Area)
+                ->orderBy('Id_Track')
+                ->lockForUpdate()
+                ->get();
 
-        // Hapus semua foto lama dari direktori dan database
-        foreach ($existingTracks as $existing) {
-            foreach ($existing->track_photo as $photo) {
-                if (Storage::disk('uploads')->exists($photo->Path_Track_Photo)) {
-                    Storage::disk('uploads')->delete($photo->Path_Track_Photo);
+            // Hapus semua foto lama dari direktori dan database
+            foreach ($existingTracks as $existing) {
+                foreach ($existing->track_photo as $photo) {
+                    if (Storage::disk('uploads')->exists($photo->Path_Track_Photo)) {
+                        Storage::disk('uploads')->delete($photo->Path_Track_Photo);
+                    }
+                    $photo->delete();
                 }
-                $photo->delete();
             }
-        }
 
-        // Simpan data track (update data lama jika sudah ada, buat baru jika belum)
-        $track = $existingTracks->first();
-        if ($track) {
-            $track->update([
-                'Id_User' => $request->Id_User,
-                'Time_Track' => Carbon::now(),
-                'Status_Track' => 0,
-            ]);
+            // Simpan data track (update data lama jika sudah ada, buat baru jika belum)
+            $track = $existingTracks->first();
+            if ($track) {
+                $track->update([
+                    'Id_User' => $request->Id_User,
+                    'Time_Track' => Carbon::now(),
+                    'Status_Track' => 0,
+                ]);
 
-            // Hapus track duplikat yang tersisa (jika ada)
-            foreach ($existingTracks->slice(1) as $duplicate) {
-                $duplicate->delete();
+                // Hapus track duplikat yang tersisa (jika ada)
+                foreach ($existingTracks->slice(1) as $duplicate) {
+                    $duplicate->delete();
+                }
+
+                return $track;
             }
-        } else {
-            $track = Track::create([
+
+            return Track::create([
                 'Id_User' => $request->Id_User,
                 'Id_Type' => $filteredIdType,
                 'Id_Area' => $area->Id_Area,
                 'Time_Track' => Carbon::now(),
                 'Status_Track' => 0,
             ]);
-        }
+        });
 
         // Simpan semua file foto ke track_photos
         foreach ($areaPhotos as $photo) {
